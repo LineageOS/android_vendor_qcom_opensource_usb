@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2019-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2017 The Android Open Source Project
@@ -32,6 +32,7 @@
 #include <unordered_map>
 
 #include <cutils/uevent.h>
+#include <hidl/HidlTransportSupport.h>
 #include <sys/epoll.h>
 #include <utils/Errors.h>
 #include <utils/StrongPointer.h>
@@ -787,7 +788,30 @@ void checkUsbDeviceAutoSuspend(const std::string& devicePath) {
 }
 
 }  // namespace implementation
-}  // namespace V1_0
+}  // namespace V1_1
 }  // namespace usb
 }  // namespace hardware
 }  // namespace android
+
+int main() {
+  using android::hardware::configureRpcThreadpool;
+  using android::hardware::joinRpcThreadpool;
+  using android::hardware::usb::V1_1::IUsb;
+  using android::hardware::usb::V1_1::implementation::Usb;
+
+  android::sp<IUsb> service = new Usb();
+
+  configureRpcThreadpool(1, true /*callerWillJoin*/);
+  android::status_t status = service->registerAsService();
+
+  if (status != android::OK) {
+    ALOGE("Cannot register USB HAL service");
+    return 1;
+  }
+
+  ALOGI("QTI USB HAL Ready.");
+  joinRpcThreadpool();
+  // Under normal cases, execution will not reach this line.
+  ALOGI("QTI USB HAL failed to join thread pool.");
+  return 1;
+}
