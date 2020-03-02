@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2018-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2018 The Android Open Source Project
@@ -28,6 +28,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <hidl/HidlTransportSupport.h>
 
 constexpr int BUFFER_SIZE = 512;
 constexpr int MAX_FILE_PATH_LENGTH = 256;
@@ -652,3 +653,26 @@ error:
 }  // namespace usb
 }  // namespace hardware
 }  // namespace android
+
+int main() {
+  using android::hardware::configureRpcThreadpool;
+  using android::hardware::joinRpcThreadpool;
+  using android::hardware::usb::gadget::V1_0::IUsbGadget;
+  using android::hardware::usb::gadget::V1_0::implementation::UsbGadget;
+
+  android::sp<IUsbGadget> service = new UsbGadget();
+
+  configureRpcThreadpool(1, true /*callerWillJoin*/);
+  android::status_t status = service->registerAsService();
+
+  if (status != android::OK) {
+    ALOGE("Cannot register USB Gadget HAL service");
+    return 1;
+  }
+
+  ALOGI("QTI USB Gadget HAL Ready.");
+  joinRpcThreadpool();
+  // Under normal cases, execution will not reach this line.
+  ALOGI("QTI USB Gadget HAL failed to join thread pool.");
+  return 1;
+}
