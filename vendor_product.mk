@@ -4,6 +4,12 @@ else
   PRODUCT_PROPERTY_OVERRIDES += vendor.usb.diag.func.name=diag
 endif
 
+ifeq ($(TARGET_BOARD_PLATFORM),lahaina)
+  PRODUCT_PROPERTY_OVERRIDES += vendor.usb.use_ffs_mtp=1
+else
+  PRODUCT_PROPERTY_OVERRIDES += vendor.usb.use_ffs_mtp=0
+endif
+
 ifneq ($(TARGET_KERNEL_VERSION),$(filter $(TARGET_KERNEL_VERSION),4.9 4.14))
   PRODUCT_PACKAGES += android.hardware.usb@1.1-service-qti
 endif
