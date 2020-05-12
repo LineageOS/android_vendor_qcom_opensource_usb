@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "android.hardware.usb@1.1-service-qti"
+#define LOG_TAG "android.hardware.usb@1.2-service-qti"
 
 #include <android-base/logging.h>
 #include <assert.h>
@@ -42,7 +42,7 @@
 namespace android {
 namespace hardware {
 namespace usb {
-namespace V1_1 {
+namespace V1_2 {
 namespace implementation {
 
 const char GOOGLE_USB_VENDOR_ID_STR[] = "18d1";
@@ -220,7 +220,8 @@ Usb::Usb()
         : mLock(PTHREAD_MUTEX_INITIALIZER),
           mRoleSwitchLock(PTHREAD_MUTEX_INITIALIZER),
           mPartnerLock(PTHREAD_MUTEX_INITIALIZER),
-          mPartnerUp(false) {
+          mPartnerUp(false),
+          mContaminantPresence(false) {
     pthread_condattr_t attr;
     if (pthread_condattr_init(&attr)) {
         ALOGE("pthread_condattr_init failed: %s", strerror(errno));
@@ -422,28 +423,27 @@ bool canSwitchRoleHelper(const std::string &portName, PortRoleType /*type*/) {
 }
 
 /*
- * Reuse the same method for both V1_0 and V1_1 callback objects.
  * The caller of this method would reconstruct the V1_0::PortStatus
  * object if required.
  */
-Status getPortStatusHelper(hidl_vec<PortStatus_1_1> *currentPortStatus_1_1,
-    bool V1_0) {
+Status getPortStatusHelper(hidl_vec<PortStatus> *currentPortStatus_1_2,
+    bool V1_0, struct Usb *usb) {
   std::unordered_map<std::string, bool> names;
   Status result = getTypeCPortNamesHelper(&names);
   int i = -1;
 
   if (result == Status::SUCCESS) {
-    currentPortStatus_1_1->resize(names.size());
+    currentPortStatus_1_2->resize(names.size());
     for (std::pair<std::string, bool> port : names) {
       i++;
       ALOGI("%s", port.first.c_str());
-      (*currentPortStatus_1_1)[i].status.portName = port.first;
+      (*currentPortStatus_1_2)[i].status_1_1.status.portName = port.first;
 
       uint32_t currentRole;
       if (getCurrentRoleHelper(port.first, port.second,
                                PortRoleType::POWER_ROLE,
                                &currentRole) == Status::SUCCESS) {
-        (*currentPortStatus_1_1)[i].status.currentPowerRole =
+        (*currentPortStatus_1_2)[i].status_1_1.status.currentPowerRole =
             static_cast<PortPowerRole>(currentRole);
       } else {
         ALOGE("Error while retreiving portNames");
@@ -452,7 +452,7 @@ Status getPortStatusHelper(hidl_vec<PortStatus_1_1> *currentPortStatus_1_1,
 
       if (getCurrentRoleHelper(port.first, port.second, PortRoleType::DATA_ROLE,
                                &currentRole) == Status::SUCCESS) {
-        (*currentPortStatus_1_1)[i].status.currentDataRole =
+        (*currentPortStatus_1_2)[i].status_1_1.status.currentDataRole =
             static_cast<PortDataRole>(currentRole);
       } else {
         ALOGE("Error while retreiving current port role");
@@ -461,35 +461,65 @@ Status getPortStatusHelper(hidl_vec<PortStatus_1_1> *currentPortStatus_1_1,
 
       if (getCurrentRoleHelper(port.first, port.second, PortRoleType::MODE,
                                &currentRole) == Status::SUCCESS) {
-        (*currentPortStatus_1_1)[i].currentMode =
+        (*currentPortStatus_1_2)[i].status_1_1.currentMode =
             static_cast<PortMode_1_1>(currentRole);
-        (*currentPortStatus_1_1)[i].status.currentMode =
+        (*currentPortStatus_1_2)[i].status_1_1.status.currentMode =
             static_cast<V1_0::PortMode>(currentRole);
       } else {
         ALOGE("Error while retreiving current data role");
         goto done;
       }
 
-      (*currentPortStatus_1_1)[i].status.canChangeMode = true;
-      (*currentPortStatus_1_1)[i].status.canChangeDataRole =
+      (*currentPortStatus_1_2)[i].status_1_1.status.canChangeMode = true;
+      (*currentPortStatus_1_2)[i].status_1_1.status.canChangeDataRole =
           port.second ? canSwitchRoleHelper(port.first, PortRoleType::DATA_ROLE)
                       : false;
-      (*currentPortStatus_1_1)[i].status.canChangePowerRole =
+      (*currentPortStatus_1_2)[i].status_1_1.status.canChangePowerRole =
           port.second
               ? canSwitchRoleHelper(port.first, PortRoleType::POWER_ROLE)
               : false;
 
       ALOGI("connected:%d canChangeMode:%d canChagedata:%d canChangePower:%d",
-            port.second, (*currentPortStatus_1_1)[i].status.canChangeMode,
-            (*currentPortStatus_1_1)[i].status.canChangeDataRole,
-            (*currentPortStatus_1_1)[i].status.canChangePowerRole);
+            port.second, (*currentPortStatus_1_2)[i].status_1_1.status.canChangeMode,
+            (*currentPortStatus_1_2)[i].status_1_1.status.canChangeDataRole,
+            (*currentPortStatus_1_2)[i].status_1_1.status.canChangePowerRole);
 
       if (V1_0) {
-        (*currentPortStatus_1_1)[i].status.supportedModes = V1_0::PortMode::DFP;
+        (*currentPortStatus_1_2)[i].status_1_1.status.supportedModes = V1_0::PortMode::DFP;
       } else {
-        (*currentPortStatus_1_1)[i].supportedModes = PortMode_1_1::UFP | PortMode_1_1::DFP;
-        (*currentPortStatus_1_1)[i].status.supportedModes = V1_0::PortMode::NONE;
-        (*currentPortStatus_1_1)[i].status.currentMode = V1_0::PortMode::NONE;
+        (*currentPortStatus_1_2)[i].status_1_1.supportedModes = PortMode_1_1::UFP | PortMode_1_1::DFP;
+        (*currentPortStatus_1_2)[i].status_1_1.status.supportedModes = V1_0::PortMode::NONE;
+        (*currentPortStatus_1_2)[i].status_1_1.status.currentMode = V1_0::PortMode::NONE;
+
+        (*currentPortStatus_1_2)[i].supportedContaminantProtectionModes =
+            ContaminantProtectionMode::FORCE_SINK | ContaminantProtectionMode::FORCE_DISABLE;
+        (*currentPortStatus_1_2)[i].supportsEnableContaminantPresenceProtection =
+            false;
+        (*currentPortStatus_1_2)[i].supportsEnableContaminantPresenceDetection =
+            false;
+        (*currentPortStatus_1_2)[i].contaminantProtectionStatus =
+            ContaminantProtectionStatus::FORCE_SINK;
+
+        std::string contaminantPresence;
+
+        if (!readFile("/sys/class/power_supply/usb/moisture_detected", &contaminantPresence) ||
+            !readFile("/sys/class/qcom-battery/moisture_detection_status", &contaminantPresence)) {
+          if (contaminantPresence == "1") {
+            (*currentPortStatus_1_2)[i].contaminantDetectionStatus =
+                ContaminantDetectionStatus::DETECTED;
+            ALOGI("moisture: Contaminant presence detected");
+          }
+          else {
+            (*currentPortStatus_1_2)[i].contaminantDetectionStatus =
+                ContaminantDetectionStatus::NOT_DETECTED;
+            ALOGI("moisture: Contaminant presence not detected");
+          }
+        } else {
+          (*currentPortStatus_1_2)[i].supportedContaminantProtectionModes =
+              ContaminantProtectionMode::NONE | ContaminantProtectionMode::NONE;
+          (*currentPortStatus_1_2)[i].contaminantProtectionStatus =
+              ContaminantProtectionStatus::NONE;
+        }
       }
     }
     return Status::SUCCESS;
@@ -499,25 +529,36 @@ done:
 }
 
 Return<void> Usb::queryPortStatus() {
-  hidl_vec<PortStatus_1_1> currentPortStatus_1_1;
+  hidl_vec<PortStatus> currentPortStatus_1_2;
+  hidl_vec<V1_1::PortStatus_1_1> currentPortStatus_1_1;
   hidl_vec<V1_0::PortStatus> currentPortStatus;
   Status status;
-  sp<IUsbCallback> callback_V1_1 = IUsbCallback::castFrom(mCallback_1_0);
+  sp<IUsbCallback> callback_V1_2 = IUsbCallback::castFrom(mCallback_1_0);
+  sp<V1_1::IUsbCallback> callback_V1_1 = V1_1::IUsbCallback::castFrom(mCallback_1_0);
 
   pthread_mutex_lock(&mLock);
   if (mCallback_1_0 != NULL) {
-    if (callback_V1_1 != NULL) {
-      status = getPortStatusHelper(&currentPortStatus_1_1, false);
-    } else {
-      status = getPortStatusHelper(&currentPortStatus_1_1, true);
-      currentPortStatus.resize(currentPortStatus_1_1.size());
-      for (unsigned long i = 0; i < currentPortStatus_1_1.size(); i++)
-        currentPortStatus[i] = currentPortStatus_1_1[i].status;
+    if (callback_V1_1 != NULL) { // 1.1 or 1.2
+      if (callback_V1_2 == NULL) { // 1.1 only
+        status = getPortStatusHelper(&currentPortStatus_1_2, false, this);
+        currentPortStatus_1_1.resize(currentPortStatus_1_2.size());
+        for (unsigned long i = 0; i < currentPortStatus_1_2.size(); i++)
+          currentPortStatus_1_1[i].status = currentPortStatus_1_2[i].status_1_1.status;
+      }
+      else  //1.2 only
+        status = getPortStatusHelper(&currentPortStatus_1_2, false,  this);
+    } else { // 1.0 only
+      status = getPortStatusHelper(&currentPortStatus_1_2, true, this);
+      currentPortStatus.resize(currentPortStatus_1_2.size());
+      for (unsigned long i = 0; i < currentPortStatus_1_2.size(); i++)
+        currentPortStatus[i] = currentPortStatus_1_2[i].status_1_1.status;
     }
 
     Return<void> ret;
 
-    if (callback_V1_1 != NULL)
+    if (callback_V1_2 != NULL)
+      ret = callback_V1_2->notifyPortStatusChange_1_2(currentPortStatus_1_2, status);
+    else if (callback_V1_1 != NULL)
       ret = callback_V1_1->notifyPortStatusChange_1_1(currentPortStatus_1_1, status);
     else
       ret = mCallback_1_0->notifyPortStatusChange(currentPortStatus, status);
@@ -528,19 +569,36 @@ Return<void> Usb::queryPortStatus() {
     ALOGI("Notifying userspace skipped. Callback is NULL");
   }
   pthread_mutex_unlock(&mLock);
-
   return Void();
 }
 
 struct data {
   int uevent_fd;
-  android::hardware::usb::V1_1::implementation::Usb *usb;
+  android::hardware::usb::V1_2::implementation::Usb *usb;
 };
+
+Return<void> Usb::enableContaminantPresenceDetection(const hidl_string &portName,
+                                                     bool enable) {
+
+  ALOGI("Contaminant Presence Detection should always be in enable mode");
+
+  return Void();
+}
+
+Return<void> Usb::enableContaminantPresenceProtection(const hidl_string &portName,
+                                                      bool enable) {
+
+  ALOGI("Contaminant Presence Protection should always be in enable mode");
+
+  return Void();
+}
 
 static void uevent_event(uint32_t /*epevents*/, struct data *payload) {
   char msg[UEVENT_MSG_LEN + 2];
   char *cp;
   int n;
+  char flagPowerSupplyUsb = 0;
+  bool bContaminantPresence = false;
 
   n = uevent_kernel_multicast_recv(payload->uevent_fd, msg, UEVENT_MSG_LEN);
   if (n <= 0) return;
@@ -553,6 +611,11 @@ static void uevent_event(uint32_t /*epevents*/, struct data *payload) {
 
   while (*cp) {
     std::cmatch match;
+
+    sp<IUsbCallback> callback_V1_2 = IUsbCallback::castFrom(payload->usb->mCallback_1_0);
+    sp<V1_1::IUsbCallback> callback_V1_1 = V1_1::IUsbCallback::castFrom(payload->usb->mCallback_1_0);
+    hidl_vec<PortStatus> currentPortStatus_1_2;
+    Return<void> ret;
     if (std::regex_match(cp, std::regex("(add)(.*)(-partner)"))) {
        ALOGI("partner added");
        pthread_mutex_lock(&payload->usb->mPartnerLock);
@@ -560,49 +623,18 @@ static void uevent_event(uint32_t /*epevents*/, struct data *payload) {
        pthread_cond_signal(&payload->usb->mPartnerCV);
        pthread_mutex_unlock(&payload->usb->mPartnerLock);
     } else if (!strncmp(cp, "DEVTYPE=typec_", strlen("DEVTYPE=typec_"))) {
-      hidl_vec<PortStatus_1_1> currentPortStatus_1_1;
       ALOGI("uevent received %s", cp);
-      pthread_mutex_lock(&payload->usb->mLock);
-      if (payload->usb->mCallback_1_0 != NULL) {
-        sp<IUsbCallback> callback_V1_1 = IUsbCallback::castFrom(payload->usb->mCallback_1_0);
-        Return<void> ret;
-
-        // V1_1 callback
-        if (callback_V1_1 != NULL) {
-          Status status = getPortStatusHelper(&currentPortStatus_1_1, false);
-          ret = callback_V1_1->notifyPortStatusChange_1_1(
-              currentPortStatus_1_1, status);
-        } else { // V1_0 callback
-          Status status = getPortStatusHelper(&currentPortStatus_1_1, true);
-
-          /*
-           * Copying the result from getPortStatusHelper
-           * into V1_0::PortStatus to pass back through
-           * the V1_0 callback object.
-           */
-          hidl_vec<V1_0::PortStatus> currentPortStatus;
-          currentPortStatus.resize(currentPortStatus_1_1.size());
-          for (unsigned long i = 0; i < currentPortStatus_1_1.size(); i++)
-            currentPortStatus[i] = currentPortStatus_1_1[i].status;
-
-          ret = payload->usb->mCallback_1_0->notifyPortStatusChange(
-              currentPortStatus, status);
-        }
-        if (!ret.isOk()) ALOGE("error %s", ret.description().c_str());
-      } else {
-        ALOGI("Notifying userspace skipped. Callback is NULL");
-      }
-      pthread_mutex_unlock(&payload->usb->mLock);
+      ret = payload->usb->queryPortStatus();
 
       //Role switch is not in progress and port is in disconnected state
       if (!pthread_mutex_trylock(&payload->usb->mRoleSwitchLock)) {
-        for (unsigned long i = 0; i < currentPortStatus_1_1.size(); i++) {
+        for (unsigned long i = 0; i < currentPortStatus_1_2.size(); i++) {
           DIR *dp = opendir(std::string("/sys/class/typec/"
-              + std::string(currentPortStatus_1_1[i].status.portName.c_str())
+              + std::string(currentPortStatus_1_2[i].status_1_1.status.portName.c_str())
               + "-partner").c_str());
           if (dp == NULL) {
               //PortRole role = {.role = static_cast<uint32_t>(PortMode::UFP)};
-              switchToDrp(currentPortStatus_1_1[i].status.portName);
+              switchToDrp(currentPortStatus_1_2[i].status_1_1.status.portName);
           } else {
               closedir(dp);
           }
@@ -617,8 +649,53 @@ static void uevent_event(uint32_t /*epevents*/, struct data *payload) {
         std::csub_match submatch = match[1];
         checkUsbDeviceAutoSuspend("/sys" +  submatch.str());
       }
-    }
+    } else if (!strncmp(cp, "POWER_SUPPLY_NAME=usb",
+               strlen("POWER_SUPPLY_NAME=usb"))) {
+      ALOGI("uevent received %s", cp);
 
+        std::string contaminantPresence;
+
+        if (!readFile("/sys/class/qcom-battery/moisture_detection_status", &contaminantPresence)) {
+          if ((contaminantPresence == "1" && payload->usb->mContaminantPresence == false)
+              || (contaminantPresence == "0" && payload->usb->mContaminantPresence == true)){
+
+            if(contaminantPresence == "1") payload->usb->mContaminantPresence = true;
+            else payload->usb->mContaminantPresence = false;
+
+            if (callback_V1_2 != NULL) {
+              Status status = getPortStatusHelper(&currentPortStatus_1_2, false, payload->usb);
+              ret = callback_V1_2->notifyPortStatusChange_1_2(
+                  currentPortStatus_1_2, status);
+              if (!ret.isOk()) ALOGE("error %s", ret.description().c_str());
+            }
+          }
+        } else {
+          flagPowerSupplyUsb = 1;
+        }
+    } else if ((flagPowerSupplyUsb == 1) &&
+               (!strncmp(cp,"POWER_SUPPLY_MOISTURE_DETECTED",
+                strlen("POWER_SUPPLY_MOISTURE_DETECTED")))) {
+
+      if (!strncmp(cp, "POWER_SUPPLY_MOISTURE_DETECTED=1",
+          strlen("POWER_SUPPLY_MOISTURE_DETECTED=1"))) {
+        bContaminantPresence = 1;
+      }
+      else {
+        bContaminantPresence = 0;
+      }
+
+      if(payload->usb->mContaminantPresence != bContaminantPresence) {
+        payload->usb->mContaminantPresence = bContaminantPresence;
+
+        if (callback_V1_2 != NULL) {
+          Status status = getPortStatusHelper(&currentPortStatus_1_2, false, payload->usb);
+          ret = callback_V1_2->notifyPortStatusChange_1_2(
+              currentPortStatus_1_2, status);
+          if (!ret.isOk()) ALOGE("error %s", ret.description().c_str());
+        }
+      }
+      ALOGI("Moisture: uevent received %s", cp);
+    }
     /* advance to after the next \0 */
     while (*cp++) {}
   }
@@ -640,7 +717,7 @@ void *work(void *param) {
   }
 
   payload.uevent_fd = uevent_fd;
-  payload.usb = (android::hardware::usb::V1_1::implementation::Usb *)param;
+  payload.usb = (android::hardware::usb::V1_2::implementation::Usb *)param;
 
   fcntl(uevent_fd, F_SETFL, O_NONBLOCK);
 
@@ -695,7 +772,8 @@ void sighandler(int sig) {
 
 Return<void> Usb::setCallback(const sp<V1_0::IUsbCallback> &callback) {
 
-  sp<IUsbCallback> callback_V1_1 = IUsbCallback::castFrom(callback);
+  sp<V1_1::IUsbCallback> callback_V1_1 = V1_1::IUsbCallback::castFrom(callback);
+  sp<IUsbCallback> callback_V1_2 = IUsbCallback::castFrom(callback);
 
   if (callback != NULL)
       if (callback_V1_1 == NULL)
@@ -788,7 +866,7 @@ void checkUsbDeviceAutoSuspend(const std::string& devicePath) {
 }
 
 }  // namespace implementation
-}  // namespace V1_1
+}  // namespace V1_2
 }  // namespace usb
 }  // namespace hardware
 }  // namespace android
@@ -796,8 +874,8 @@ void checkUsbDeviceAutoSuspend(const std::string& devicePath) {
 int main() {
   using android::hardware::configureRpcThreadpool;
   using android::hardware::joinRpcThreadpool;
-  using android::hardware::usb::V1_1::IUsb;
-  using android::hardware::usb::V1_1::implementation::Usb;
+  using android::hardware::usb::V1_2::IUsb;
+  using android::hardware::usb::V1_2::implementation::Usb;
 
   android::sp<IUsb> service = new Usb();
 

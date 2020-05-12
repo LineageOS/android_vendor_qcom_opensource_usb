@@ -1,4 +1,4 @@
-<!-- Copyright (c) 2019 The Linux Foundation. All rights reserved.
+<!-- Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -29,11 +29,11 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     <hal format="hidl">
         <name>android.hardware.usb</name>
         <transport>hwbinder</transport>
-        <version>1.1</version>
+        <version>1.2</version>
         <interface>
             <name>IUsb</name>
             <instance>default</instance>
         </interface>
-        <fqname>@1.1::IUsb/default</fqname>
+        <fqname>@1.2::IUsb/default</fqname>
     </hal>
 </manifest>

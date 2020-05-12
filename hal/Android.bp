@@ -17,18 +17,19 @@ cc_defaults {
 }
 
 cc_binary {
-    name: "android.hardware.usb@1.1-service-qti",
+    name: "android.hardware.usb@1.2-service-qti",
     defaults: ["qti_usb_hal_defaults"],
     shared_libs: [
         "android.hardware.usb@1.0",
         "android.hardware.usb@1.1",
+        "android.hardware.usb@1.2",
     ],
     srcs: [
         "Usb.cpp",
     ],
 
-    init_rc: ["android.hardware.usb@1.1-service-qti.rc"],
-    vintf_fragments: ["android.hardware.usb@1.1-service.xml"],
+    init_rc: ["android.hardware.usb@1.2-service-qti.rc"],
+    vintf_fragments: ["android.hardware.usb@1.2-service.xml"],
 }
 
 cc_binary {
