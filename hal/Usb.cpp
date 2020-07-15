@@ -427,7 +427,7 @@ bool canSwitchRoleHelper(const std::string &portName, PortRoleType /*type*/) {
  * object if required.
  */
 Status getPortStatusHelper(hidl_vec<PortStatus> *currentPortStatus_1_2,
-    bool V1_0, struct Usb *usb) {
+    bool V1_0) {
   std::unordered_map<std::string, bool> names;
   Status result = getTypeCPortNamesHelper(&names);
   int i = -1;
@@ -540,15 +540,15 @@ Return<void> Usb::queryPortStatus() {
   if (mCallback_1_0 != NULL) {
     if (callback_V1_1 != NULL) { // 1.1 or 1.2
       if (callback_V1_2 == NULL) { // 1.1 only
-        status = getPortStatusHelper(&currentPortStatus_1_2, false, this);
+        status = getPortStatusHelper(&currentPortStatus_1_2, false);
         currentPortStatus_1_1.resize(currentPortStatus_1_2.size());
         for (unsigned long i = 0; i < currentPortStatus_1_2.size(); i++)
           currentPortStatus_1_1[i].status = currentPortStatus_1_2[i].status_1_1.status;
       }
       else  //1.2 only
-        status = getPortStatusHelper(&currentPortStatus_1_2, false,  this);
+        status = getPortStatusHelper(&currentPortStatus_1_2, false);
     } else { // 1.0 only
-      status = getPortStatusHelper(&currentPortStatus_1_2, true, this);
+      status = getPortStatusHelper(&currentPortStatus_1_2, true);
       currentPortStatus.resize(currentPortStatus_1_2.size());
       for (unsigned long i = 0; i < currentPortStatus_1_2.size(); i++)
         currentPortStatus[i] = currentPortStatus_1_2[i].status_1_1.status;
@@ -577,9 +577,28 @@ struct data {
   android::hardware::usb::V1_2::implementation::Usb *usb;
 };
 
+Return<void> callbackNotifyPortStatusChangeHelper(struct Usb *usb) {
+  hidl_vec<PortStatus> currentPortStatus_1_2;
+  Status status;
+  Return<void> ret;
+  sp<IUsbCallback> callback_V1_2 = IUsbCallback::castFrom(usb->mCallback_1_0);
+
+  pthread_mutex_lock(&usb->mLock);
+  status = getPortStatusHelper(&currentPortStatus_1_2, false);
+  ret = callback_V1_2->notifyPortStatusChange_1_2(currentPortStatus_1_2, status);
+
+  if (!ret.isOk())
+    ALOGE("notifyPortStatusChange_1_2 error %s", ret.description().c_str());
+
+  pthread_mutex_unlock(&usb->mLock);
+  return Void();
+}
+
 Return<void> Usb::enableContaminantPresenceDetection(const hidl_string &portName,
                                                      bool enable) {
+  Return<void> ret;
 
+  ret = callbackNotifyPortStatusChangeHelper(this);
   ALOGI("Contaminant Presence Detection should always be in enable mode");
 
   return Void();
@@ -587,7 +606,9 @@ Return<void> Usb::enableContaminantPresenceDetection(const hidl_string &portName
 
 Return<void> Usb::enableContaminantPresenceProtection(const hidl_string &portName,
                                                       bool enable) {
+  Return<void> ret;
 
+  ret = callbackNotifyPortStatusChangeHelper(this);
   ALOGI("Contaminant Presence Protection should always be in enable mode");
 
   return Void();
@@ -651,8 +672,6 @@ static void uevent_event(uint32_t /*epevents*/, struct data *payload) {
       }
     } else if (!strncmp(cp, "POWER_SUPPLY_NAME=usb",
                strlen("POWER_SUPPLY_NAME=usb"))) {
-      ALOGI("uevent received %s", cp);
-
         std::string contaminantPresence;
 
         if (!readFile("/sys/class/qcom-battery/moisture_detection_status", &contaminantPresence)) {
@@ -663,7 +682,7 @@ static void uevent_event(uint32_t /*epevents*/, struct data *payload) {
             else payload->usb->mContaminantPresence = false;
 
             if (callback_V1_2 != NULL) {
-              Status status = getPortStatusHelper(&currentPortStatus_1_2, false, payload->usb);
+              Status status = getPortStatusHelper(&currentPortStatus_1_2, false);
               ret = callback_V1_2->notifyPortStatusChange_1_2(
                   currentPortStatus_1_2, status);
               if (!ret.isOk()) ALOGE("error %s", ret.description().c_str());
@@ -688,7 +707,7 @@ static void uevent_event(uint32_t /*epevents*/, struct data *payload) {
         payload->usb->mContaminantPresence = bContaminantPresence;
 
         if (callback_V1_2 != NULL) {
-          Status status = getPortStatusHelper(&currentPortStatus_1_2, false, payload->usb);
+          Status status = getPortStatusHelper(&currentPortStatus_1_2, false);
           ret = callback_V1_2->notifyPortStatusChange_1_2(
               currentPortStatus_1_2, status);
           if (!ret.isOk()) ALOGE("error %s", ret.description().c_str());
