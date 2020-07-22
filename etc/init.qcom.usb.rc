@@ -43,6 +43,9 @@ on charger
     setprop sys.usb.config mass_storage
     setprop sys.usb.configfs 1
 
+on init
+    exec u:r:vendor-qti-testscripts:s0 -- /vendor/bin/sh /vendor/bin/init.qti.usb.debug.sh
+
 on boot
     mount configfs none /config
     mkdir /config/usb_gadget/g1 0770

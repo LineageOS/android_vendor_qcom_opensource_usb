@@ -1,3 +1,11 @@
+# USB init scripts
+PRODUCT_PACKAGES += init.qcom.usb.rc init.qcom.usb.sh
+
+# additional debugging on userdebug/eng builds
+ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
+  PRODUCT_PACKAGES += init.qti.usb.debug.sh
+endif
+
 ifeq ($(TARGET_HAS_DIAG_ROUTER),true)
   PRODUCT_PROPERTY_OVERRIDES += vendor.usb.diag.func.name=ffs
 else
@@ -11,7 +19,7 @@ else
 endif
 
 ifneq ($(TARGET_KERNEL_VERSION),$(filter $(TARGET_KERNEL_VERSION),4.9 4.14))
-  PRODUCT_PACKAGES += android.hardware.usb@1.1-service-qti
+  PRODUCT_PACKAGES += android.hardware.usb@1.2-service-qti
 endif
 
 ifeq ($(TARGET_USES_USB_GADGET_HAL), true)
