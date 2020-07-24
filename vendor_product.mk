@@ -12,7 +12,7 @@ else
   PRODUCT_PROPERTY_OVERRIDES += vendor.usb.diag.func.name=diag
 endif
 
-ifeq ($(TARGET_BOARD_PLATFORM),lahaina)
+ifneq ($(TARGET_KERNEL_VERSION),$(filter $(TARGET_KERNEL_VERSION),4.9 4.14 4.19))
   PRODUCT_PROPERTY_OVERRIDES += vendor.usb.use_ffs_mtp=1
 else
   PRODUCT_PROPERTY_OVERRIDES += vendor.usb.use_ffs_mtp=0
