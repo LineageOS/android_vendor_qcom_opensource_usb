@@ -239,6 +239,7 @@ Usb::Usb()
         ALOGE("pthread_condattr_destroy failed: %s", strerror(errno));
         abort();
     }
+
 }
 
 
@@ -645,6 +646,22 @@ static void uevent_event(uint32_t /*epevents*/, struct data *payload) {
        pthread_mutex_unlock(&payload->usb->mPartnerLock);
     } else if (!strncmp(cp, "DEVTYPE=typec_", strlen("DEVTYPE=typec_"))) {
       ALOGI("uevent received %s", cp);
+
+      std::string power_operation_mode;
+      if (!readFile("/sys/class/typec/port0/power_operation_mode", &power_operation_mode)) {
+        if(power_operation_mode == "usb_power_delivery") {
+          readFile("/config/usb_gadget/g1/configs/b.1/MaxPower", &payload->usb->mMaxPower);
+          readFile("/config/usb_gadget/g1/configs/b.1/bmAttributes", &payload->usb->mAttributes);
+          writeFile("/config/usb_gadget/g1/configs/b.1/MaxPower", "0");
+          writeFile("/config/usb_gadget/g1/configs/b.1/bmAttributes", "0xc0");
+        } else {
+          if(!payload->usb->mMaxPower.empty()) {
+            writeFile("/config/usb_gadget/g1/configs/b.1/MaxPower", payload->usb->mMaxPower.c_str());
+            writeFile("/config/usb_gadget/g1/configs/b.1/bmAttributes", payload->usb->mAttributes.c_str());
+            payload->usb->mMaxPower = "";
+          }
+        }
+      }
       ret = payload->usb->queryPortStatus();
 
       //Role switch is not in progress and port is in disconnected state
