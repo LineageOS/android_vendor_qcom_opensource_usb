@@ -65,6 +65,10 @@ struct Usb : public IUsb {
     bool mPartnerUp;
     // Variable to indicate presence or absence or contaminant
     bool mContaminantPresence;
+    // Configuration descriptor for MaxPower
+    std::string mMaxPower;
+    // Configuration descriptor for bmAttributes
+    std::string mAttributes;
 
     private:
         pthread_t mPoll;
