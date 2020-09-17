@@ -649,7 +649,9 @@ static void uevent_event(uint32_t /*epevents*/, struct data *payload) {
 
       std::string power_operation_mode;
       if (!readFile("/sys/class/typec/port0/power_operation_mode", &power_operation_mode)) {
-        if(power_operation_mode == "usb_power_delivery") {
+	if (payload->usb->mPowerOpMode == power_operation_mode) {
+	  ALOGI("uevent recieved for same device %s", power_operation_mode.c_str());
+	} else if(power_operation_mode == "usb_power_delivery") {
           readFile("/config/usb_gadget/g1/configs/b.1/MaxPower", &payload->usb->mMaxPower);
           readFile("/config/usb_gadget/g1/configs/b.1/bmAttributes", &payload->usb->mAttributes);
           writeFile("/config/usb_gadget/g1/configs/b.1/MaxPower", "0");
@@ -661,6 +663,8 @@ static void uevent_event(uint32_t /*epevents*/, struct data *payload) {
             payload->usb->mMaxPower = "";
           }
         }
+
+	payload->usb->mPowerOpMode = power_operation_mode;
       }
       ret = payload->usb->queryPortStatus();
 
