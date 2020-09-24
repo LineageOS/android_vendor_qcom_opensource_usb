@@ -33,6 +33,7 @@
 
 #include <cutils/uevent.h>
 #include <hidl/HidlTransportSupport.h>
+#include <linux/usb/ch9.h>
 #include <sys/epoll.h>
 #include <utils/Errors.h>
 #include <utils/StrongPointer.h>
@@ -948,13 +949,22 @@ static void checkUsbDeviceAutoSuspend(const std::string& devicePath) {
 static void checkUsbInterfaceAutoSuspend(const std::string& devicePath,
         const std::string &intf) {
   std::string bInterfaceClass;
-  readFile(devicePath + intf + "/bInterfaceClass", &bInterfaceClass);
+  int interfaceClass;
 
-  // allow autosuspend for audio class devices
-  if (bInterfaceClass == "01") {
-    ALOGI("auto suspend audio usb device %s%s", devicePath.c_str(), intf.c_str());
-    writeFile(devicePath + "/power/control", "auto");
-    writeFile(devicePath + "/power/wakeup", "enabled");
+  readFile(devicePath + intf + "/bInterfaceClass", &bInterfaceClass);
+  interfaceClass = std::stoi(bInterfaceClass, 0, 16);
+
+  // allow autosuspend for certain class devices
+  switch (interfaceClass) {
+    case USB_CLASS_AUDIO:
+    case USB_CLASS_HUB:
+      ALOGI("auto suspend usb interfaces %s", devicePath.c_str());
+      writeFile(devicePath + "/power/control", "auto");
+      writeFile(devicePath + "/power/wakeup", "enabled");
+      break;
+     default:
+      ALOGI("usb interface does not support autosuspend %s", devicePath.c_str());
+
   }
 }
 
