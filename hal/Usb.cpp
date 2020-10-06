@@ -52,8 +52,6 @@ const char GOOGLE_USBC_35_ADAPTER_UNPLUGGED_ID_STR[] = "5029";
 volatile bool destroyThread;
 
 static void checkUsbDeviceAutoSuspend(const std::string& devicePath);
-static void checkUsbInterfaceAutoSuspend(const std::string& devicePath,
-        const std::string &intf);
 
 static int32_t readFile(const std::string &filename, std::string *contents) {
   FILE *fp;
@@ -683,19 +681,11 @@ static void uevent_event(uint32_t /*epevents*/, struct data *payload) {
       }
       break;
     } else if (std::regex_match(cp, match,
-          std::regex("add@(/devices/platform/soc/.*dwc3/xhci-hcd\\.\\d\\.auto/"
-                     "usb\\d/\\d-\\d(?:/[\\d\\.-]+)*)"))) {
+          std::regex("add@(/devices/soc/a800000\\.ssusb/a800000\\.dwc3/xhci-hcd\\.0\\.auto/"
+                     "usb\\d/\\d-\\d)/.*"))) {
       if (match.size() == 2) {
         std::csub_match submatch = match[1];
         checkUsbDeviceAutoSuspend("/sys" +  submatch.str());
-      }
-    } else if (std::regex_match(cp, match,
-          std::regex("bind@(/devices/platform/soc/.*dwc3/xhci-hcd\\.\\d\\.auto/"
-                     "usb\\d/\\d-\\d(?:/[\\d\\.-]+)*)(/[^/]*:[^/]*)"))) {
-      if (match.size() == 3) {
-        std::csub_match devpath = match[1];
-        std::csub_match intfpath = match[2];
-        checkUsbInterfaceAutoSuspend("/sys" + devpath.str(), intfpath.str());
       }
     } else if (!strncmp(cp, "POWER_SUPPLY_NAME=usb",
                strlen("POWER_SUPPLY_NAME=usb"))) {
@@ -870,40 +860,11 @@ Return<void> Usb::setCallback(const sp<V1_0::IUsbCallback> &callback) {
   }
 
   pthread_mutex_unlock(&mLock);
-
-  // Scan for enumerated USB audio devices and enable autosuspend
-  std::string usbaudio = "/sys/bus/usb/drivers/snd-usb-audio/";
-  DIR *dp = opendir(usbaudio.c_str());
-  if (dp != NULL) {
-    struct dirent *ep;
-    std::string parent;
-
-    while ((ep = readdir(dp))) {
-      if (ep->d_type == DT_LNK && isdigit(ep->d_name[0])) {
-        char buf[PATH_MAX];
-        if (realpath((usbaudio + ep->d_name).c_str(), buf)) {
-          char *p = strrchr(buf, '/');
-          if (p)
-            *p = '\0';
-
-          if (parent == buf)
-            continue;
-
-          ALOGI("auto suspend usb device %s", buf);
-          parent = buf;
-          writeFile(parent + "/power/control", "auto");
-          writeFile(parent + "/power/wakeup", "enabled");
-        }
-      }
-    }
-    closedir(dp);
-  }
-
   return Void();
 }
 
 /*
- * allow specific USB device idProduct and idVendor to auto suspend
+ * whitelisting USB device idProduct and idVendor to allow auto suspend.
  */
 static bool canProductAutoSuspend(const std::string &deviceIdVendor,
     const std::string &deviceIdProduct) {
@@ -929,7 +890,7 @@ static bool canUsbDeviceAutoSuspend(const std::string &devicePath) {
  * USB device path string), and enable autosupend on the USB device if
  * necessary.
  */
-static void checkUsbDeviceAutoSuspend(const std::string& devicePath) {
+void checkUsbDeviceAutoSuspend(const std::string& devicePath) {
   /*
    * Currently we only actively enable devices that should be autosuspended, and leave others
    * to the defualt.
@@ -937,20 +898,6 @@ static void checkUsbDeviceAutoSuspend(const std::string& devicePath) {
   if (canUsbDeviceAutoSuspend(devicePath)) {
     ALOGI("auto suspend usb device %s", devicePath.c_str());
     writeFile(devicePath + "/power/control", "auto");
-    writeFile(devicePath + "/power/wakeup", "enabled");
-  }
-}
-
-static void checkUsbInterfaceAutoSuspend(const std::string& devicePath,
-        const std::string &intf) {
-  std::string bInterfaceClass;
-  readFile(devicePath + intf + "/bInterfaceClass", &bInterfaceClass);
-
-  // allow autosuspend for audio class devices
-  if (bInterfaceClass == "01") {
-    ALOGI("auto suspend audio usb device %s%s", devicePath.c_str(), intf.c_str());
-    writeFile(devicePath + "/power/control", "auto");
-    writeFile(devicePath + "/power/wakeup", "enabled");
   }
 }
 
