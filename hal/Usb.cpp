@@ -53,7 +53,7 @@ const char GOOGLE_USBC_35_ADAPTER_UNPLUGGED_ID_STR[] = "5029";
 volatile bool destroyThread;
 
 static void checkUsbDeviceAutoSuspend(const std::string& devicePath);
-static void checkUsbInterfaceAutoSuspend(const std::string& devicePath,
+static bool checkUsbInterfaceAutoSuspend(const std::string& devicePath,
         const std::string &intf);
 
 static int32_t readFile(const std::string &filename, std::string *contents) {
@@ -696,7 +696,7 @@ static void uevent_event(uint32_t /*epevents*/, struct data *payload) {
       }
     } else if (std::regex_match(cp, match,
           std::regex("bind@(/devices/platform/soc/.*dwc3/xhci-hcd\\.\\d\\.auto/"
-                     "usb\\d/\\d-\\d(?:/[\\d\\.-]+)*)(/[^/]*:[^/]*)"))) {
+                     "usb\\d/\\d-\\d(?:/[\\d\\.-]+)*)/([^/]*:[^/]*)"))) {
       if (match.size() == 3) {
         std::csub_match devpath = match[1];
         std::csub_match intfpath = match[2];
@@ -876,28 +876,39 @@ Return<void> Usb::setCallback(const sp<V1_0::IUsbCallback> &callback) {
 
   pthread_mutex_unlock(&mLock);
 
-  // Scan for enumerated USB audio devices and enable autosuspend
-  std::string usbaudio = "/sys/bus/usb/drivers/snd-usb-audio/";
-  DIR *dp = opendir(usbaudio.c_str());
+  // Scan for enumerated USB devices and enable autosuspend
+  std::string usbdevices = "/sys/bus/usb/devices/";
+  DIR *dp = opendir(usbdevices.c_str());
   if (dp != NULL) {
-    struct dirent *ep;
-    std::string parent;
+    struct dirent *deviceDir;
+    struct dirent *intfDir;
+    DIR *ip;
 
-    while ((ep = readdir(dp))) {
-      if (ep->d_type == DT_LNK && isdigit(ep->d_name[0])) {
+    while ((deviceDir = readdir(dp))) {
+      /*
+       * Iterate over all the devices connected over USB while skipping
+       * the interfaces.
+       */
+      if (deviceDir->d_type == DT_LNK && !strchr(deviceDir->d_name, ':')) {
         char buf[PATH_MAX];
-        if (realpath((usbaudio + ep->d_name).c_str(), buf)) {
-          char *p = strrchr(buf, '/');
-          if (p)
-            *p = '\0';
+        if (realpath((usbdevices + deviceDir->d_name).c_str(), buf)) {
 
-          if (parent == buf)
+          ip = opendir(buf);
+          if (ip == NULL)
             continue;
 
-          ALOGI("auto suspend usb device %s", buf);
-          parent = buf;
-          writeFile(parent + "/power/control", "auto");
-          writeFile(parent + "/power/wakeup", "enabled");
+          while ((intfDir = readdir(ip))) {
+            // Scan over all the interfaces that are part of the device
+            if (intfDir->d_type == DT_DIR && strchr(intfDir->d_name, ':')) {
+              /*
+               * If the autosuspend is successfully enabled, no need
+               * to iterate over other interfaces.
+               */
+              if (checkUsbInterfaceAutoSuspend(buf, intfDir->d_name))
+                break;
+            }
+          }
+          closedir(ip);
         }
       }
     }
@@ -946,12 +957,12 @@ static void checkUsbDeviceAutoSuspend(const std::string& devicePath) {
   }
 }
 
-static void checkUsbInterfaceAutoSuspend(const std::string& devicePath,
+static bool checkUsbInterfaceAutoSuspend(const std::string& devicePath,
         const std::string &intf) {
   std::string bInterfaceClass;
-  int interfaceClass;
+  int interfaceClass, ret = -1;
 
-  readFile(devicePath + intf + "/bInterfaceClass", &bInterfaceClass);
+  readFile(devicePath + "/" + intf + "/bInterfaceClass", &bInterfaceClass);
   interfaceClass = std::stoi(bInterfaceClass, 0, 16);
 
   // allow autosuspend for certain class devices
@@ -959,13 +970,18 @@ static void checkUsbInterfaceAutoSuspend(const std::string& devicePath,
     case USB_CLASS_AUDIO:
     case USB_CLASS_HUB:
       ALOGI("auto suspend usb interfaces %s", devicePath.c_str());
-      writeFile(devicePath + "/power/control", "auto");
-      writeFile(devicePath + "/power/wakeup", "enabled");
+      ret = writeFile(devicePath + "/power/control", "auto");
+      if (ret)
+        break;
+
+      ret = writeFile(devicePath + "/power/wakeup", "enabled");
       break;
      default:
       ALOGI("usb interface does not support autosuspend %s", devicePath.c_str());
 
   }
+
+  return ret ? false : true;
 }
 
 }  // namespace implementation
