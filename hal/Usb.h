@@ -69,6 +69,8 @@ struct Usb : public IUsb {
     std::string mMaxPower;
     // Configuration descriptor for bmAttributes
     std::string mAttributes;
+    // Current power operation mode
+    std::string mPowerOpMode;
 
     private:
         pthread_t mPoll;
