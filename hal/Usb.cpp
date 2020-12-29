@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2019-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2017 The Android Open Source Project
@@ -52,6 +52,7 @@ const char GOOGLE_USBC_35_ADAPTER_UNPLUGGED_ID_STR[] = "5029";
 // Set by the signal handler to destroy the thread
 volatile bool destroyThread;
 
+static void checkUsbWakeupSupport(struct Usb *usb);
 static void checkUsbDeviceAutoSuspend(const std::string& devicePath);
 static bool checkUsbInterfaceAutoSuspend(const std::string& devicePath,
         const std::string &intf);
@@ -694,7 +695,7 @@ static void uevent_event(uint32_t /*epevents*/, struct data *payload) {
         std::csub_match submatch = match[1];
         checkUsbDeviceAutoSuspend("/sys" +  submatch.str());
       }
-    } else if (std::regex_match(cp, match,
+    } else if (!payload->usb->mIgnoreWakeup && std::regex_match(cp, match,
           std::regex("bind@(/devices/platform/soc/.*dwc3/xhci-hcd\\.\\d\\.auto/"
                      "usb\\d/\\d-\\d(?:/[\\d\\.-]+)*)/([^/]*:[^/]*)"))) {
       if (match.size() == 3) {
@@ -876,7 +877,43 @@ Return<void> Usb::setCallback(const sp<V1_0::IUsbCallback> &callback) {
 
   pthread_mutex_unlock(&mLock);
 
-  // Scan for enumerated USB devices and enable autosuspend
+  checkUsbWakeupSupport(this);
+
+  return Void();
+}
+
+static void checkUsbWakeupSupport(struct Usb *usb) {
+  std::string platdevices = "/sys/bus/platform/devices/";
+  DIR *pd = opendir(platdevices.c_str());
+  if (pd != NULL) {
+    struct dirent *platDir;
+    while ((platDir = readdir(pd))) {
+      std::string cname = platDir->d_name;
+      /*
+       * Scan for USB controller. Here "susb" takes care of both hsusb and ssusb.
+       * Set mIgnoreWakeup based on the availability of 1st Controller's
+       * power/wakeup node.
+       */
+      if (strstr(platDir->d_name, "susb")) {
+	if (faccessat(dirfd(pd), (cname + "/power/wakeup").c_str(), F_OK, 0) < 0) {
+	  usb->mIgnoreWakeup = true;
+	  ALOGI("PLATFORM DOESN'T SUPPORT WAKEUP");
+	} else {
+	  usb->mIgnoreWakeup = false;
+	}
+	break;
+      }
+    }
+    closedir(pd);
+  }
+
+  if (usb->mIgnoreWakeup)
+    return;
+
+  /*
+   * If wakeup is supported then scan for enumerated USB devices and
+   * enable autosuspend.
+   */
   std::string usbdevices = "/sys/bus/usb/devices/";
   DIR *dp = opendir(usbdevices.c_str());
   if (dp != NULL) {
@@ -914,8 +951,6 @@ Return<void> Usb::setCallback(const sp<V1_0::IUsbCallback> &callback) {
     }
     closedir(dp);
   }
-
-  return Void();
 }
 
 /*
