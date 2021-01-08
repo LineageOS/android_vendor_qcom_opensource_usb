@@ -11,7 +11,7 @@ ifneq ($(TARGET_KERNEL_VERSION),$(filter $(TARGET_KERNEL_VERSION),4.9 4.14))
 endif
 
 ifeq ($(TARGET_USES_USB_GADGET_HAL), true)
-  PRODUCT_PACKAGES += android.hardware.usb.gadget@1.0-service-qti
+  PRODUCT_PACKAGES += android.hardware.usb.gadget@1.1-service-qti
 endif
 
 #
