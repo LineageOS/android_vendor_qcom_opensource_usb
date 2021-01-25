@@ -65,12 +65,16 @@ struct Usb : public IUsb {
     bool mPartnerUp;
     // Variable to indicate presence or absence or contaminant
     bool mContaminantPresence;
+    // Variable to indicate presence or absence of wakeup node
+    bool mIgnoreWakeup;
     // Configuration descriptor for MaxPower
     std::string mMaxPower;
     // Configuration descriptor for bmAttributes
     std::string mAttributes;
     // Current power operation mode
     std::string mPowerOpMode;
+    // Path to get the status of contaminant presence
+    std::string mContaminantStatusPath;
 
     private:
         pthread_t mPoll;
