@@ -6,6 +6,24 @@ ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
   PRODUCT_PACKAGES += init.qti.usb.debug.sh
 endif
 
+ifneq ($(TARGET_KERNEL_VERSION),$(filter $(TARGET_KERNEL_VERSION),4.9 4.14))
+  PRODUCT_PACKAGES += android.hardware.usb@1.2-service-qti
+endif
+
+ifeq ($(TARGET_USES_USB_GADGET_HAL), true)
+  PRODUCT_PACKAGES += android.hardware.usb.gadget@1.0-service-qti
+endif
+
+#
+# Default property overrides for various function configurations
+# These can be further overridden at runtime in init*.rc files as needed
+#
+PRODUCT_PROPERTY_OVERRIDES += vendor.usb.rndis.func.name=gsi
+PRODUCT_PROPERTY_OVERRIDES += vendor.usb.rmnet.func.name=gsi
+PRODUCT_PROPERTY_OVERRIDES += vendor.usb.rmnet.inst.name=rmnet
+PRODUCT_PROPERTY_OVERRIDES += vendor.usb.dpl.inst.name=dpl
+PRODUCT_PROPERTY_OVERRIDES += vendor.usb.qdss.inst.name=qdss
+
 ifeq ($(TARGET_HAS_DIAG_ROUTER),true)
   PRODUCT_PROPERTY_OVERRIDES += vendor.usb.diag.func.name=ffs
 else
@@ -18,10 +36,3 @@ else
   PRODUCT_PROPERTY_OVERRIDES += vendor.usb.use_ffs_mtp=0
 endif
 
-ifneq ($(TARGET_KERNEL_VERSION),$(filter $(TARGET_KERNEL_VERSION),4.9 4.14))
-  PRODUCT_PACKAGES += android.hardware.usb@1.2-service-qti
-endif
-
-ifeq ($(TARGET_USES_USB_GADGET_HAL), true)
-  PRODUCT_PACKAGES += android.hardware.usb.gadget@1.0-service-qti
-endif

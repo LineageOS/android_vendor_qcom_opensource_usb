@@ -1,5 +1,5 @@
 #!/vendor/bin/sh
-# Copyright (c) 2020 The Linux Foundation. All rights reserved.
+# Copyright (c) 2021 The Linux Foundation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -48,6 +48,11 @@ if [ -d $tracefs ]; then
     echo 1 > $tracefs/instances/usb/events/ucsi/ucsi_connector_change/enable
     echo 1 > $tracefs/instances/usb/events/ucsi/ucsi_reset_ppm/enable
     echo 1 > $tracefs/instances/usb/events/ucsi/ucsi_run_command/enable
+
+    #USB gadget
+    echo 1 > $tracefs/instances/usb/events/gadget/usb_gadget_disconnect/enable
+    echo 1 > $tracefs/instances/usb/events/gadget/usb_gadget_connect/enable
+    echo 1 > $tracefs/instances/usb/events/gadget/usb_gadget_vbus_draw/enable
 
     echo 1 > $tracefs/instances/usb/tracing_on
 fi
