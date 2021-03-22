@@ -505,6 +505,9 @@ Status getPortStatusHelper(hidl_vec<PortStatus> *currentPortStatus_1_2,
         (*currentPortStatus_1_2)[i].contaminantProtectionStatus =
             ContaminantProtectionStatus::FORCE_SINK;
 
+        if (port.first != "port0") // moisture detection only on first port
+          continue;
+
         std::string contaminantPresence;
 
         if (!usb->mContaminantStatusPath.empty() &&
@@ -517,7 +520,6 @@ Status getPortStatusHelper(hidl_vec<PortStatus> *currentPortStatus_1_2,
           else {
             (*currentPortStatus_1_2)[i].contaminantDetectionStatus =
                 ContaminantDetectionStatus::NOT_DETECTED;
-            ALOGI("moisture: Contaminant presence not detected");
           }
         } else {
           (*currentPortStatus_1_2)[i].supportedContaminantProtectionModes =
@@ -619,12 +621,109 @@ Return<void> Usb::enableContaminantPresenceProtection(const hidl_string &portNam
   return Void();
 }
 
+static void handle_typec_uevent(Usb *usb, const char *msg)
+{
+  ALOGI("uevent received %s", msg);
+
+  // if (std::regex_match(cp, std::regex("(add)(.*)(-partner)")))
+  if (!strncmp(msg, "add@", 4) && !strncmp(msg + strlen(msg) - 8, "-partner", 8)) {
+     ALOGI("partner added");
+     pthread_mutex_lock(&usb->mPartnerLock);
+     usb->mPartnerUp = true;
+     pthread_cond_signal(&usb->mPartnerCV);
+     pthread_mutex_unlock(&usb->mPartnerLock);
+  }
+
+  std::string power_operation_mode;
+  if (!readFile("/sys/class/typec/port0/power_operation_mode", &power_operation_mode)) {
+    if (usb->mPowerOpMode == power_operation_mode) {
+      ALOGI("uevent recieved for same device %s", power_operation_mode.c_str());
+    } else if(power_operation_mode == "usb_power_delivery") {
+      readFile("/config/usb_gadget/g1/configs/b.1/MaxPower", &usb->mMaxPower);
+      readFile("/config/usb_gadget/g1/configs/b.1/bmAttributes", &usb->mAttributes);
+      writeFile("/config/usb_gadget/g1/configs/b.1/MaxPower", "0");
+      writeFile("/config/usb_gadget/g1/configs/b.1/bmAttributes", "0xc0");
+    } else {
+      if(!usb->mMaxPower.empty()) {
+        writeFile("/config/usb_gadget/g1/configs/b.1/MaxPower", usb->mMaxPower.c_str());
+        writeFile("/config/usb_gadget/g1/configs/b.1/bmAttributes", usb->mAttributes.c_str());
+        usb->mMaxPower = "";
+      }
+    }
+
+    usb->mPowerOpMode = power_operation_mode;
+  }
+
+  usb->queryPortStatus();
+}
+
+// process POWER_SUPPLY uevent for contaminant presence
+static void handle_psy_uevent(Usb *usb, const char *msg)
+{
+  sp<IUsbCallback> callback_V1_2 = IUsbCallback::castFrom(usb->mCallback_1_0);
+  hidl_vec<PortStatus> currentPortStatus_1_2;
+  Status status;
+  Return<void> ret;
+  bool moisture_detected;
+  std::string contaminantPresence;
+
+  // don't bother parsing any further if caller doesn't support USB HAL 1.2
+  // to report contaminant presence events
+  if (callback_V1_2 == NULL)
+    return;
+
+  while (*msg) {
+    if (!strncmp(msg, "POWER_SUPPLY_NAME=", 18)) {
+      msg += 18;
+      if (strcmp(msg, "usb")) // make sure we're looking at the correct uevent
+        return;
+      else
+        break;
+    }
+
+    // advance to after the next \0
+    while (*msg++) ;
+  }
+
+  // read moisture detection status from sysfs
+  if (usb->mContaminantStatusPath.empty() ||
+        readFile(usb->mContaminantStatusPath, &contaminantPresence))
+    return;
+
+  moisture_detected = (contaminantPresence[0] == '1');
+
+  if (usb->mContaminantPresence != moisture_detected) {
+    usb->mContaminantPresence = moisture_detected;
+
+    status = getPortStatusHelper(&currentPortStatus_1_2, false, usb);
+    ret = callback_V1_2->notifyPortStatusChange_1_2(currentPortStatus_1_2, status);
+    if (!ret.isOk()) ALOGE("error %s", ret.description().c_str());
+  }
+
+  //Role switch is not in progress and port is in disconnected state
+  if (!pthread_mutex_trylock(&usb->mRoleSwitchLock)) {
+    for (unsigned long i = 0; i < currentPortStatus_1_2.size(); i++) {
+      DIR *dp = opendir(std::string("/sys/class/typec/"
+          + std::string(currentPortStatus_1_2[i].status_1_1.status.portName.c_str())
+          + "-partner").c_str());
+      if (dp == NULL) {
+        //PortRole role = {.role = static_cast<uint32_t>(PortMode::UFP)};
+        switchToDrp(currentPortStatus_1_2[i].status_1_1.status.portName);
+      } else {
+        closedir(dp);
+      }
+    }
+    pthread_mutex_unlock(&usb->mRoleSwitchLock);
+  }
+}
+
 static void uevent_event(uint32_t /*epevents*/, struct data *payload) {
   char msg[UEVENT_MSG_LEN + 2];
-  char *cp;
   int n;
-  char flagPowerSupplyUsb = 0;
-  bool bContaminantPresence = false;
+  static std::regex add_regex("add@(/devices/platform/soc/.*dwc3/xhci-hcd\\.\\d\\.auto/"
+                              "usb\\d/\\d-\\d(?:/[\\d\\.-]+)*)");
+  static std::regex bind_regex("bind@(/devices/platform/soc/.*dwc3/xhci-hcd\\.\\d\\.auto/"
+                               "usb\\d/\\d-\\d(?:/[\\d\\.-]+)*)/([^/]*:[^/]*)");
 
   n = uevent_kernel_multicast_recv(payload->uevent_fd, msg, UEVENT_MSG_LEN);
   if (n <= 0) return;
@@ -633,124 +732,24 @@ static void uevent_event(uint32_t /*epevents*/, struct data *payload) {
 
   msg[n] = '\0';
   msg[n + 1] = '\0';
-  cp = msg;
 
-  while (*cp) {
-    std::cmatch match;
+  std::cmatch match;
 
-    sp<IUsbCallback> callback_V1_2 = IUsbCallback::castFrom(payload->usb->mCallback_1_0);
-    sp<V1_1::IUsbCallback> callback_V1_1 = V1_1::IUsbCallback::castFrom(payload->usb->mCallback_1_0);
-    hidl_vec<PortStatus> currentPortStatus_1_2;
-    Return<void> ret;
-    if (std::regex_match(cp, std::regex("(add)(.*)(-partner)"))) {
-       ALOGI("partner added");
-       pthread_mutex_lock(&payload->usb->mPartnerLock);
-       payload->usb->mPartnerUp = true;
-       pthread_cond_signal(&payload->usb->mPartnerCV);
-       pthread_mutex_unlock(&payload->usb->mPartnerLock);
-    } else if (!strncmp(cp, "DEVTYPE=typec_", strlen("DEVTYPE=typec_"))) {
-      ALOGI("uevent received %s", cp);
-
-      std::string power_operation_mode;
-      if (!readFile("/sys/class/typec/port0/power_operation_mode", &power_operation_mode)) {
-	if (payload->usb->mPowerOpMode == power_operation_mode) {
-	  ALOGI("uevent recieved for same device %s", power_operation_mode.c_str());
-	} else if(power_operation_mode == "usb_power_delivery") {
-          readFile("/config/usb_gadget/g1/configs/b.1/MaxPower", &payload->usb->mMaxPower);
-          readFile("/config/usb_gadget/g1/configs/b.1/bmAttributes", &payload->usb->mAttributes);
-          writeFile("/config/usb_gadget/g1/configs/b.1/MaxPower", "0");
-          writeFile("/config/usb_gadget/g1/configs/b.1/bmAttributes", "0xc0");
-        } else {
-          if(!payload->usb->mMaxPower.empty()) {
-            writeFile("/config/usb_gadget/g1/configs/b.1/MaxPower", payload->usb->mMaxPower.c_str());
-            writeFile("/config/usb_gadget/g1/configs/b.1/bmAttributes", payload->usb->mAttributes.c_str());
-            payload->usb->mMaxPower = "";
-          }
-        }
-
-	payload->usb->mPowerOpMode = power_operation_mode;
-      }
-      ret = payload->usb->queryPortStatus();
-
-      //Role switch is not in progress and port is in disconnected state
-      if (!pthread_mutex_trylock(&payload->usb->mRoleSwitchLock)) {
-        for (unsigned long i = 0; i < currentPortStatus_1_2.size(); i++) {
-          DIR *dp = opendir(std::string("/sys/class/typec/"
-              + std::string(currentPortStatus_1_2[i].status_1_1.status.portName.c_str())
-              + "-partner").c_str());
-          if (dp == NULL) {
-              //PortRole role = {.role = static_cast<uint32_t>(PortMode::UFP)};
-              switchToDrp(currentPortStatus_1_2[i].status_1_1.status.portName);
-          } else {
-              closedir(dp);
-          }
-        }
-        pthread_mutex_unlock(&payload->usb->mRoleSwitchLock);
-      }
-      break;
-    } else if (std::regex_match(cp, match,
-          std::regex("add@(/devices/platform/soc/.*dwc3/xhci-hcd\\.\\d\\.auto/"
-                     "usb\\d/\\d-\\d(?:/[\\d\\.-]+)*)"))) {
-      if (match.size() == 2) {
-        std::csub_match submatch = match[1];
-        checkUsbDeviceAutoSuspend("/sys" +  submatch.str());
-      }
-    } else if (!payload->usb->mIgnoreWakeup && std::regex_match(cp, match,
-          std::regex("bind@(/devices/platform/soc/.*dwc3/xhci-hcd\\.\\d\\.auto/"
-                     "usb\\d/\\d-\\d(?:/[\\d\\.-]+)*)/([^/]*:[^/]*)"))) {
-      if (match.size() == 3) {
-        std::csub_match devpath = match[1];
-        std::csub_match intfpath = match[2];
-        checkUsbInterfaceAutoSuspend("/sys" + devpath.str(), intfpath.str());
-      }
-    } else if (!strncmp(cp, "POWER_SUPPLY_NAME=usb",
-               strlen("POWER_SUPPLY_NAME=usb"))) {
-        std::string contaminantPresence;
-
-        if (!payload->usb->mContaminantStatusPath.empty() &&
-                          !readFile(payload->usb->mContaminantStatusPath, &contaminantPresence)) {
-          if ((contaminantPresence == "1" && payload->usb->mContaminantPresence == false)
-              || (contaminantPresence == "0" && payload->usb->mContaminantPresence == true)){
-
-            if(contaminantPresence == "1") payload->usb->mContaminantPresence = true;
-            else payload->usb->mContaminantPresence = false;
-
-            if (callback_V1_2 != NULL) {
-              Status status = getPortStatusHelper(&currentPortStatus_1_2, false, payload->usb);
-              ret = callback_V1_2->notifyPortStatusChange_1_2(
-                  currentPortStatus_1_2, status);
-              if (!ret.isOk()) ALOGE("error %s", ret.description().c_str());
-            }
-          }
-        } else {
-          flagPowerSupplyUsb = 1;
-        }
-    } else if ((flagPowerSupplyUsb == 1) &&
-               (!strncmp(cp,"POWER_SUPPLY_MOISTURE_DETECTED",
-                strlen("POWER_SUPPLY_MOISTURE_DETECTED")))) {
-
-      if (!strncmp(cp, "POWER_SUPPLY_MOISTURE_DETECTED=1",
-          strlen("POWER_SUPPLY_MOISTURE_DETECTED=1"))) {
-        bContaminantPresence = 1;
-      }
-      else {
-        bContaminantPresence = 0;
-      }
-
-      if(payload->usb->mContaminantPresence != bContaminantPresence) {
-        payload->usb->mContaminantPresence = bContaminantPresence;
-
-        if (callback_V1_2 != NULL) {
-          Status status = getPortStatusHelper(&currentPortStatus_1_2, false, payload->usb);
-          ret = callback_V1_2->notifyPortStatusChange_1_2(
-              currentPortStatus_1_2, status);
-          if (!ret.isOk()) ALOGE("error %s", ret.description().c_str());
-        }
-      }
-      ALOGI("Moisture: uevent received %s", cp);
+  if (strstr(msg, "typec/port")) {
+    handle_typec_uevent(payload->usb, msg);
+  } else if (strstr(msg, "power_supply/usb")) {
+    handle_psy_uevent(payload->usb, msg + strlen(msg) + 1);
+  } else if (std::regex_match(msg, match, add_regex)) {
+    if (match.size() == 2) {
+      std::csub_match submatch = match[1];
+      checkUsbDeviceAutoSuspend("/sys" +  submatch.str());
     }
-    /* advance to after the next \0 */
-    while (*cp++) {}
+  } else if (!payload->usb->mIgnoreWakeup && std::regex_match(msg, match, bind_regex)) {
+    if (match.size() == 3) {
+      std::csub_match devpath = match[1];
+      std::csub_match intfpath = match[2];
+      checkUsbInterfaceAutoSuspend("/sys" + devpath.str(), intfpath.str());
+    }
   }
 }
 
