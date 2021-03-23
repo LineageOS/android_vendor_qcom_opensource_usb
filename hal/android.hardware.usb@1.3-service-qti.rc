@@ -25,7 +25,12 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-service vendor.usb-hal-1-2 /vendor/bin/hw/android.hardware.usb@1.2-service-qti
+service vendor.usb-hal-1-3 /vendor/bin/hw/android.hardware.usb@1.3-service-qti
     class hal
     user root
     group root system mtp
+
+on post-fs
+    chown system system /sys/devices/platform/soc/a600000.ssusb/id
+    chown system system /sys/devices/platform/soc/a600000.ssusb/b_sess
+    chown system system /sys/devices/platform/soc/a600000.ssusb/usb_data_enabled
