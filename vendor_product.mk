@@ -10,7 +10,7 @@ ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
 endif
 
 ifneq ($(TARGET_KERNEL_VERSION),$(filter $(TARGET_KERNEL_VERSION),4.9 4.14))
-  PRODUCT_PACKAGES += android.hardware.usb@1.2-service-qti
+  PRODUCT_PACKAGES += android.hardware.usb@1.3-service-qti
 endif
 
 ifneq ($(filter taro kalama neo parrot,$(TARGET_BOARD_PLATFORM)),)
@@ -49,4 +49,3 @@ ifneq ($(TARGET_KERNEL_VERSION),$(filter $(TARGET_KERNEL_VERSION),4.9 4.14 4.19)
 else
   PRODUCT_PROPERTY_OVERRIDES += vendor.usb.use_ffs_mtp=0
 endif
-
