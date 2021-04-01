@@ -11,7 +11,10 @@ ifneq ($(TARGET_KERNEL_VERSION),$(filter $(TARGET_KERNEL_VERSION),4.9 4.14))
 endif
 
 ifeq ($(TARGET_USES_USB_GADGET_HAL), true)
+  PRODUCT_PROPERTY_OVERRIDES += vendor.usb.use_gadget_hal=1
   PRODUCT_PACKAGES += android.hardware.usb.gadget@1.1-service-qti
+else
+  PRODUCT_PROPERTY_OVERRIDES += vendor.usb.use_gadget_hal=0
 endif
 
 #
