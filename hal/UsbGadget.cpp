@@ -21,6 +21,8 @@
 
 #include <android-base/file.h>
 #include <android-base/properties.h>
+#include <functional>
+#include <map>
 #include <dirent.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -33,11 +35,14 @@
 #define ESOC_DEVICE_PATH "/sys/bus/esoc/devices"
 #define SOC_MACHINE_PATH "/sys/devices/soc0/machine"
 #define USB_CONTROLLER_PROP "vendor.usb.controller"
+#define DIAG_FUNC_NAME_PROP "vendor.usb.diag.func.name"
 #define RNDIS_FUNC_NAME_PROP "vendor.usb.rndis.func.name"
 #define RMNET_FUNC_NAME_PROP "vendor.usb.rmnet.func.name"
 #define RMNET_INST_NAME_PROP "vendor.usb.rmnet.inst.name"
 #define DPL_INST_NAME_PROP "vendor.usb.dpl.inst.name"
+#define VENDOR_USB_PROP "vendor.usb.config"
 #define PERSIST_VENDOR_USB_PROP "persist.vendor.usb.config"
+#define QDSS_INST_NAME_PROP "vendor.usb.qdss.inst.name"
 
 enum mdmType {
   INTERNAL,
@@ -107,6 +112,162 @@ V1_0::Status UsbGadget::tearDownGadget() {
     ALOGE("mMonitor not running");
 
   return Status::SUCCESS;
+}
+
+static std::map<std::string, std::pair<const char *, const char *> >
+supported_compositions {
+  { "mass_storage", { "0x05C6", "0xF000" } },
+  { "mass_storage,adb", { "0x05C6", "0x9015" } },
+  { "diag,adb", { "0x05C6", "0x901D" } },
+  { "diag", { "0x05C6", "0x900E" } },
+  { "diag,serial_cdev,rmnet,adb", { "0x05C6", "0x9091" } },
+  { "diag,serial_cdev,rmnet", { "0x05C6", "0x9092" } },
+  { "rndis", { "0x05C6", "0xF00E" } },
+  { "rndis,adb", { "0x05C6", "0x9024" } },
+  { "rndis,diag", { "0x05C6", "0x902C" } },
+  { "rndis,diag,adb", { "0x05C6", "0x902D" } },
+  { "rndis,serial_cdev", { "0x05C6", "0x90B3" } },
+  { "rndis,serial_cdev,adb", { "0x05C6", "0x90B4" } },
+  { "rndis,serial_cdev,diag,", { "0x05C6", "0x90B5" } },
+  { "rndis,serial_cdev,diag,adb", { "0x05C6", "0x90B6" } },
+  { "mtp,diag", { "0x05C6", "0x901B" } },
+  { "mtp,diag,adb", { "0x05C6", "0x903A" } },
+  { "diag,qdss", { "0x05C6", "0x904A" } },
+  { "diag,qdss,adb", { "0x05C6", "0x9060" } },
+  { "rndis,diag,qdss", { "0x05C6", "0x9081" } },
+  { "rndis,diag,qdss,adb", { "0x05C6", "0x9082" } },
+  { "diag,qdss,rmnet", { "0x05C6", "0x9083" } },
+  { "diag,qdss,rmnet,adb", { "0x05C6", "0x9084" } },
+  { "ncm", { "0x05C6", "0xA4A1" } },
+  { "ncm,adb", { "0x05C6", "0x908C" } },
+  { "diag,serial_cdev", { "0x05C6", "0x9004" } },
+  { "diag,serial_cdev,rmnet,dpl", { "0x05C6", "0x90B7" } },
+  { "diag,serial_cdev,rmnet,dpl,adb", { "0x05C6", "0x90B8" } },
+  { "rndis,diag,dpl", { "0x05C6", "0x90BF" } },
+  { "rndis,diag,dpl,adb", { "0x05C6", "0x90C0" } },
+  { "ccid", { "0x05C6", "0x90CE" } },
+  { "ccid,adb", { "0x05C6", "0x90CF" } },
+  { "ccid,diag", { "0x05C6", "0x90D0" } },
+  { "ccid,diag,adb", { "0x05C6", "0x90D1" } },
+  { "diag,serial_cdev,rmnet,ccid", { "0x05C6", "0x90D2" } },
+  { "diag,serial_cdev,rmnet,ccid,adb", { "0x05C6", "0x90D3" } },
+  { "diag,diag_mdm,qdss,qdss_mdm,serial_cdev,serial_cdev_mdm,rmnet",
+      { "0x05C6", "0x90D7" } },
+  { "diag,diag_mdm,qdss,qdss_mdm,serial_cdev,serial_cdev_mdm,rmnet,adb",
+      { "0x05C6", "0x90D8" } },
+  { "diag,diag_mdm,qdss,qdss_mdm,serial_cdev,serial_cdev_mdm,dpl,rmnet",
+      { "0x05C6", "0x90DD" } },
+  { "diag,diag_mdm,qdss,qdss_mdm,serial_cdev,serial_cdev_mdm,dpl,rmnet,adb",
+      { "0x05C6", "0x90DE" } },
+  { "diag,serial_cdev,rmnet,dpl,qdss", { "0x05C6", "0x90DC" } },
+  { "diag,serial_cdev,rmnet,dpl,qdss,adb", { "0x05C6", "0x90DB" } },
+  { "diag,uac2,adb", { "0x05C6", "0x90CA" } },
+  { "diag,uac2", { "0x05C6", "0x901C" } },
+  { "diag,uvc,adb", { "0x05C6", "0x90CB" } },
+  { "diag,uvc", { "0x05C6", "0x90DF" } },
+  { "diag,uac2,uvc,adb", { "0x05C6", "0x90CC" } },
+  { "diag,uac2,uvc", { "0x05C6", "0x90E0" } },
+  { "diag,diag_mdm,qdss,qdss_mdm,serial_cdev,dpl,rmnet",
+      { "0x05C6", "0x90E4" } },
+  { "diag,diag_mdm,qdss,qdss_mdm,serial_cdev,dpl,rmnet,adb",
+      { "0x05C6", "0x90E5" } },
+  { "rndis,diag,diag_mdm,qdss,qdss_mdm,serial_cdev,dpl",
+      { "0x05C6", "0x90E6" } },
+  { "rndis,diag,diag_mdm,qdss,qdss_mdm,serial_cdev,dpl,adb",
+      { "0x05C6", "0x90E7" } },
+  { "rndis,diag,qdss,serial_cdev,dpl", { "0x05C6", "0x90E8" } },
+  { "rndis,diag,qdss,serial_cdev,dpl,adb", { "0x05C6", "0x90E9" } },
+  { "diag,diag_mdm,adb", { "0x05C6", "0x90D9" } },
+  { "diag,diag_mdm,diag_mdm2,qdss,qdss_mdm,serial_cdev,dpl,rmnet",
+      { "0x05C6", "0x90F6" } },
+  { "diag,diag_mdm,diag_mdm2,qdss,qdss_mdm,serial_cdev,dpl,rmnet,adb",
+      { "0x05C6", "0x90F7" } },
+  { "rndis,diag,diag_mdm,diag_mdm2,qdss,qdss_mdm,serial_cdev,dpl",
+      { "0x05C6", "0x90F8" } },
+  { "rndis,diag,diag_mdm,diag_mdm2,qdss,qdss_mdm,serial_cdev,dpl,adb",
+      { "0x05C6", "0x90F9" } },
+  { "diag,diag_mdm,qdss_mdm,dpl,adb", { "0x05C6", "0x90FF" } },
+  { "diag,qdss,dpl,adb", { "0x05C6", "0x9104" } },
+  { "diag,dpl", { "0x05C6", "0x9105" } },
+  { "diag,diag_cnss,serial_cdev,rmnet,dpl,qdss,adb", { "0x05C6", "0x9110" } },
+  { "diag,diag_cnss,serial_cdev,rmnet,dpl,qdss", { "0x05C6", "0x9111" } },
+};
+
+static std::string rndisFuncname() {
+  std::string rndisFunc = GetProperty(RNDIS_FUNC_NAME_PROP, "");
+
+  if (rndisFunc.empty()) {
+    return "rndis";
+  }
+
+  return rndisFunc + ".rndis";
+}
+
+static std::map<std::string, std::function<std::string()> > supported_funcs {
+  { "adb",              [](){ return "ffs.adb"; } },
+  { "ccid",             [](){ return "ccid.ccid"; } },
+  { "diag",             [](){ return GetProperty(DIAG_FUNC_NAME_PROP, "diag") + ".diag"; } },
+  { "diag_cnss",        [](){ return GetProperty(DIAG_FUNC_NAME_PROP, "diag") + ".diag_mdm2"; } },
+  { "diag_mdm2",        [](){ return GetProperty(DIAG_FUNC_NAME_PROP, "diag") + ".diag_mdm2"; } },
+  { "diag_mdm",         [](){ return GetProperty(DIAG_FUNC_NAME_PROP, "diag") + ".diag_mdm"; } },
+  { "dpl",              [](){ return GetProperty(RMNET_FUNC_NAME_PROP, "gsi") + "." + GetProperty(DPL_INST_NAME_PROP, "dpl"); } },
+  { "mass_storage",     [](){ return "mass_storage.0"; } },
+  { "mtp",              [](){ return "ffs.mtp"; } },
+  { "ncm",              [](){ return "ncm.0"; } },
+  { "ptp",              [](){ return "ffs.ptp"; } },
+  { "qdss",             [](){ return "qdss." + GetProperty(QDSS_INST_NAME_PROP, "qdss"); } },
+  { "qdss_mdm",         [](){ return "qdss.qdss_mdm"; } },
+  { "rmnet",            [](){ return GetProperty(RMNET_FUNC_NAME_PROP, "gsi") + "." + GetProperty(RMNET_INST_NAME_PROP, "rmnet"); } },
+  { "rndis",            rndisFuncname },
+  { "serial_cdev",      [](){ return "cser.dun.0"; } },
+  { "serial_cdev_mdm",  [](){ return "cser.dun.2"; } },
+  { "uac2",             [](){ return "uac2.0"; } },
+  { "uvc",              [](){ return "uvc.0"; } },
+};
+
+static int addFunctionsFromPropString(std::string prop, int &i, bool adb) {
+  // tokenize the prop string and add each function individually
+  for (size_t start = 0; start != std::string::npos; ) {
+    size_t end = prop.find_first_of(',', start);
+    std::string funcname;
+    if (end == std::string::npos) {
+      funcname = prop.substr(start, prop.length() - start);
+      start = end;
+    } else {
+      funcname = prop.substr(start, end - start);
+      start = end + 1;
+    }
+
+    if (!adb && funcname == "adb")
+      continue;
+
+    if (!supported_funcs.count(funcname)) {
+      ALOGE("Function \"%s\" unsupported", funcname.c_str());
+      return -1;
+    }
+
+    ALOGI("Adding %s", funcname.c_str());
+    if (linkFunction(supported_funcs[funcname]().c_str(), i++))
+      return -1;
+  }
+
+  return 0;
+}
+
+static int lookupAndSetVidPid(std::string prop) {
+  if (!supported_compositions.count(prop)) {
+    ALOGE("Composition \"%s\" unsupported", prop.c_str());
+    return -1;
+  }
+
+  auto comp = supported_compositions[prop];
+  std::string vid = comp.first;
+  std::string pid = comp.second;
+
+  if (setVidPid(vid.c_str(), pid.c_str()) != Status::SUCCESS)
+    return -1;
+
+  return 0;
 }
 
 static V1_0::Status validateAndSetVidPid(uint64_t functions) {
@@ -209,104 +370,90 @@ V1_0::Status UsbGadget::setupFunctions(
     uint64_t timeout) {
   bool ffsEnabled = false;
   int i = 0;
+  const char *comp;
   enum mdmType mtype;
   std::string gadgetName = GetProperty(USB_CONTROLLER_PROP, "");
-  std::string rndisFunc = GetProperty(RNDIS_FUNC_NAME_PROP, "");
-  std::string rmnetFunc = GetProperty(RMNET_FUNC_NAME_PROP, "");
-  std::string rmnetInst = GetProperty(RMNET_INST_NAME_PROP, "");
-  std::string dplInst = GetProperty(DPL_INST_NAME_PROP, "");
-  std::string vendorProp = GetProperty(PERSIST_VENDOR_USB_PROP, "");
+  std::string vendorProp = GetProperty(VENDOR_USB_PROP, GetProperty(PERSIST_VENDOR_USB_PROP, ""));
 
   if (gadgetName.empty()) {
     ALOGE("UDC name not defined");
     return Status::ERROR;
   }
 
-  if (rmnetInst.empty()) {
-    ALOGE("rmnetinstance not defined");
-    rmnetInst = "rmnet";
-  }
-
-  if (dplInst.empty()) {
-    ALOGE("dplinstance not defined");
-    dplInst = "dpl";
-  }
-
-  rmnetInst = rmnetFunc + "." + rmnetInst;
-  dplInst = rmnetFunc + "." + dplInst;
-
-  if (addGenericAndroidFunctions(&mMonitorFfs, functions, &ffsEnabled, &i) !=
-      Status::SUCCESS)
-    return Status::ERROR;
-
   mtype = getModemType();
   if ((functions & GadgetFunction::RNDIS) != 0) {
+    ALOGI("setCurrentUsbFunctions rndis");
+
+    // for RNDIS+ADB, additional functions (diag, etc) depending on modem type
     if (functions & GadgetFunction::ADB) {
-      if (mtype == EXTERNAL || mtype == INTERNAL_EXTERNAL) {
-        ALOGI("esoc RNDIS default composition");
-        if (linkFunction("diag.diag", i++)) return Status::ERROR;
-        if (linkFunction("diag.diag_mdm", i++)) return Status::ERROR;
-        if (linkFunction("qdss.qdss", i++)) return Status::ERROR;
-        if (linkFunction("qdss.qdss_mdm", i++)) return Status::ERROR;
-        if (linkFunction("cser.dun.0", i++)) return Status::ERROR;
-        if (linkFunction(dplInst.c_str(), i++))
-          return Status::ERROR;
-        if (setVidPid("0x05c6", "0x90e7") != Status::SUCCESS)
-          return Status::ERROR;
-      } else if (mtype == INTERNAL) {
-        ALOGI("RNDIS default composition");
-        if (linkFunction("diag.diag", i++)) return Status::ERROR;
-        if (linkFunction("qdss.qdss", i++)) return Status::ERROR;
-        if (linkFunction("cser.dun.0", i++)) return Status::ERROR;
-        if (linkFunction(dplInst.c_str(), i++))
-          return Status::ERROR;
-        if (setVidPid("0x05c6", "0x90e9") != Status::SUCCESS)
-          return Status::ERROR;
+      switch (mtype) {
+      case EXTERNAL:
+      case INTERNAL_EXTERNAL:
+        comp = "rndis,diag,diag_mdm,qdss,qdss_mdm,serial_cdev,dpl,adb";
+        break;
+      case INTERNAL:
+        comp = "rndis,diag,qdss,serial_cdev,dpl,adb";
+        break;
+      default:
+        comp = "rndis,adb";
+        break;
       }
+
+      ALOGI("RNDIS+ADB QC default composition: %s", comp);
+      if (addFunctionsFromPropString(comp, i, false))
+        return Status::ERROR;
+      if (lookupAndSetVidPid(comp))
+        return Status::ERROR;
+    } else if (linkFunction(rndisFuncname().c_str(), i++)) {
+      return Status::ERROR;
     }
+  } else if (addGenericAndroidFunctions(&mMonitorFfs, functions, &ffsEnabled, &i)
+              != Status::SUCCESS) {
+    return Status::ERROR;
   }
 
-  /* override adb-only with additional QTI functions */
+  // override adb-only with additional QTI functions
   if (i == 0 && functions & GadgetFunction::ADB) {
-    /* vendor defined functions if any run from vendor rc file */
+    // If persist.vendor.usb.config or vendor.usb.config is set, look it up, parse it,
+    // and link each function into the composition
     if (!vendorProp.empty()) {
-      ALOGI("enable vendor usb config composition");
-      SetProperty("vendor.usb.config", vendorProp);
-      return Status::SUCCESS;
+      // tack on ADB to the property if not there, since we only arrive here
+      // if "USB debugging enabled" is chosen which implies ADB
+      if (vendorProp.find("adb") == std::string::npos)
+        vendorProp += ",adb";
+
+      ALOGI("setting composition from %s: %s", VENDOR_USB_PROP,
+              vendorProp.c_str());
+      if (!addFunctionsFromPropString(vendorProp, i, false))
+        if (!lookupAndSetVidPid(vendorProp))
+          goto enable_adb;
+
+      // if failed, then use below default compositions
+      unlinkFunctions(CONFIG_PATH);
+      i = 0;
     }
 
-    if (mtype == EXTERNAL || mtype == INTERNAL_EXTERNAL) {
-      ALOGI("esoc default composition");
-      if (linkFunction("diag.diag", i++)) return Status::ERROR;
-      if (linkFunction("diag.diag_mdm", i++)) return Status::ERROR;
-      if (linkFunction("qdss.qdss", i++)) return Status::ERROR;
-      if (linkFunction("qdss.qdss_mdm", i++)) return Status::ERROR;
-      if (linkFunction("cser.dun.0", i++)) return Status::ERROR;
-      if (linkFunction(dplInst.c_str(), i++))
-        return Status::ERROR;
-      if (linkFunction(rmnetInst.c_str(), i++))
-        return Status::ERROR;
-      if (setVidPid("0x05c6", "0x90e5") != Status::SUCCESS)
-        return Status::ERROR;
-    } else if (mtype == NONE) {
-      ALOGI("enable APQ default composition");
-      if (linkFunction("diag.diag", i++)) return Status::ERROR;
-      if (setVidPid("0x05c6", "0x901d") != Status::SUCCESS)
-        return Status::ERROR;
-    } else {
-      ALOGI("enable QC default composition");
-      if (linkFunction("diag.diag", i++)) return Status::ERROR;
-      if (linkFunction("cser.dun.0", i++)) return Status::ERROR;
-      if (linkFunction(rmnetInst.c_str(), i++))
-        return Status::ERROR;
-      if (linkFunction(dplInst.c_str(), i++))
-        return Status::ERROR;
-      if (linkFunction("qdss.qdss", i++)) return Status::ERROR;
-      if (setVidPid("0x05c6", "0x90db") != Status::SUCCESS)
-        return Status::ERROR;
+    switch (mtype) {
+    case EXTERNAL:
+    case INTERNAL_EXTERNAL:
+      comp = "diag,diag_mdm,qdss,qdss_mdm,serial_cdev,dpl,rmnet,adb";
+      break;
+    case INTERNAL:
+      comp = "diag,serial_cdev,rmnet,dpl,qdss,adb";
+      break;
+    default:
+      comp = "diag,adb";
+      break;
     }
+
+    ALOGI("enable QC default composition: %s", comp);
+    if (addFunctionsFromPropString(comp, i, false))
+      return Status::ERROR;
+    if (lookupAndSetVidPid(comp))
+      return Status::ERROR;
   }
 
+enable_adb:
   // finally add ADB at the end if enabled
   if ((functions & GadgetFunction::ADB) != 0) {
     ffsEnabled = true;
