@@ -22,7 +22,13 @@ PRODUCT_PROPERTY_OVERRIDES += vendor.usb.rndis.func.name=gsi
 PRODUCT_PROPERTY_OVERRIDES += vendor.usb.rmnet.func.name=gsi
 PRODUCT_PROPERTY_OVERRIDES += vendor.usb.rmnet.inst.name=rmnet
 PRODUCT_PROPERTY_OVERRIDES += vendor.usb.dpl.inst.name=dpl
-PRODUCT_PROPERTY_OVERRIDES += vendor.usb.qdss.inst.name=qdss
+
+# QDSS uses SW path on these targets
+ifneq ($(filter lahaina taro,$(TARGET_BOARD_PLATFORM)),)
+  PRODUCT_PROPERTY_OVERRIDES += vendor.usb.qdss.inst.name=qdss_mdm
+else
+  PRODUCT_PROPERTY_OVERRIDES += vendor.usb.qdss.inst.name=qdss
+endif
 
 ifeq ($(TARGET_HAS_DIAG_ROUTER),true)
   PRODUCT_PROPERTY_OVERRIDES += vendor.usb.diag.func.name=ffs
