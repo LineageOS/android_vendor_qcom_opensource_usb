@@ -492,6 +492,12 @@ Status getPortStatusHelper(hidl_vec<PortStatus> *currentPortStatus_1_2,
         (*currentPortStatus_1_2)[i].status_1_1.status.supportedModes = V1_0::PortMode::DFP;
       } else {
         (*currentPortStatus_1_2)[i].status_1_1.supportedModes = PortMode_1_1::UFP | PortMode_1_1::DFP;
+#ifdef SUPPORTS_AUDIO_ACCESSORY
+        (*currentPortStatus_1_2)[i].status_1_1.supportedModes |= PortMode_1_1::AUDIO_ACCESSORY;
+#endif
+#ifdef SUPPORTS_DEBUG_ACCESSORY
+        (*currentPortStatus_1_2)[i].status_1_1.supportedModes |= PortMode_1_1::DEBUG_ACCESSORY;
+#endif
         (*currentPortStatus_1_2)[i].status_1_1.status.supportedModes = V1_0::PortMode::NONE;
         (*currentPortStatus_1_2)[i].status_1_1.status.currentMode = V1_0::PortMode::NONE;
 
