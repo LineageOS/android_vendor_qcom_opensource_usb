@@ -77,7 +77,7 @@ using ::android::hardware::usb::gadget::unlinkFunctions;
 UsbGadget::UsbGadget(const char* const gadget)
     : mCurrentUsbFunctionsApplied(false),
       mMonitorFfs(gadget) {
-  if (access(OS_DESC_PATH, R_OK) != 0)
+  if (access(CONFIG_PATH, R_OK) != 0)
     ALOGE("configfs setup not done yet");
 }
 
@@ -105,6 +105,9 @@ Return<Status> UsbGadget::reset() {
 
 V1_0::Status UsbGadget::tearDownGadget() {
   if (resetGadget() != Status::SUCCESS) return Status::ERROR;
+
+  if (remove(OS_DESC_PATH))
+    ALOGI("Unable to remove file %s errno:%d", OS_DESC_PATH, errno);
 
   if (mMonitorFfs.isMonitorRunning())
     mMonitorFfs.reset();
@@ -458,6 +461,13 @@ enable_adb:
   if ((functions & GadgetFunction::ADB) != 0) {
     ffsEnabled = true;
     if (addAdb(&mMonitorFfs, &i) != Status::SUCCESS) return Status::ERROR;
+  }
+
+  if (functions & (GadgetFunction::ADB | GadgetFunction::MTP | GadgetFunction::PTP)) {
+    if (symlink(CONFIG_PATH, OS_DESC_PATH)) {
+      ALOGE("Cannot create symlink %s -> %s errno:%d", CONFIG_PATH, OS_DESC_PATH, errno);
+      return Status::ERROR;
+    }
   }
 
   // Pull up the gadget right away when there are no ffs functions.
