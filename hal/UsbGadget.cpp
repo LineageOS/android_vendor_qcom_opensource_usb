@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2018-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2018 The Android Open Source Project
@@ -17,46 +17,32 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "android.hardware.usb.gadget@1.0-service-qti"
+#define LOG_TAG "android.hardware.usb.gadget@1.1-service-qti"
 
-#include "UsbGadget.h"
+#include <android-base/file.h>
+#include <android-base/properties.h>
+#include <functional>
+#include <map>
 #include <dirent.h>
 #include <fcntl.h>
 #include <stdio.h>
-#include <sys/inotify.h>
-#include <sys/mount.h>
-#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <hidl/HidlTransportSupport.h>
+#include <UsbGadgetCommon.h>
+#include "UsbGadget.h"
 
-constexpr int BUFFER_SIZE = 512;
-constexpr int MAX_FILE_PATH_LENGTH = 256;
-constexpr int EPOLL_EVENTS = 10;
-constexpr bool DEBUG = false;
-constexpr int DISCONNECT_WAIT_US = 10000;
-
-#define GADGET_PATH "/config/usb_gadget/g1/"
-#define PULLUP_PATH GADGET_PATH "UDC"
-#define VENDOR_ID_PATH GADGET_PATH "idVendor"
-#define PRODUCT_ID_PATH GADGET_PATH "idProduct"
-#define DEVICE_CLASS_PATH GADGET_PATH "bDeviceClass"
-#define DEVICE_SUB_CLASS_PATH GADGET_PATH "bDeviceSubClass"
-#define DEVICE_PROTOCOL_PATH GADGET_PATH "bDeviceProtocol"
-#define DESC_USE_PATH GADGET_PATH "os_desc/use"
-#define OS_DESC_PATH GADGET_PATH "os_desc/b.1"
-#define CONFIG_PATH GADGET_PATH "configs/b.1/"
-#define FUNCTIONS_PATH GADGET_PATH "functions/"
-#define FUNCTION_NAME "function"
-#define FUNCTION_PATH CONFIG_PATH FUNCTION_NAME
 #define ESOC_DEVICE_PATH "/sys/bus/esoc/devices"
 #define SOC_MACHINE_PATH "/sys/devices/soc0/machine"
 #define USB_CONTROLLER_PROP "vendor.usb.controller"
+#define DIAG_FUNC_NAME_PROP "vendor.usb.diag.func.name"
 #define RNDIS_FUNC_NAME_PROP "vendor.usb.rndis.func.name"
 #define RMNET_FUNC_NAME_PROP "vendor.usb.rmnet.func.name"
 #define RMNET_INST_NAME_PROP "vendor.usb.rmnet.inst.name"
 #define DPL_INST_NAME_PROP "vendor.usb.dpl.inst.name"
+#define VENDOR_USB_PROP "vendor.usb.config"
 #define PERSIST_VENDOR_USB_PROP "persist.vendor.usb.config"
+#define QDSS_INST_NAME_PROP "vendor.usb.qdss.inst.name"
 
 enum mdmType {
   INTERNAL,
@@ -69,166 +55,30 @@ namespace android {
 namespace hardware {
 namespace usb {
 namespace gadget {
-namespace V1_0 {
+namespace V1_1 {
 namespace implementation {
 
-volatile bool gadgetPullup;
+using ::android::sp;
+using ::android::base::GetProperty;
+using ::android::base::SetProperty;
+using ::android::base::WriteStringToFile;
+using ::android::base::ReadFileToString;
+using ::android::hardware::Return;
+using ::android::hardware::Void;
+using ::android::hardware::usb::gadget::V1_0::GadgetFunction;
+using ::android::hardware::usb::gadget::V1_0::Status;
+using ::android::hardware::usb::gadget::addAdb;
+using ::android::hardware::usb::gadget::kDisconnectWaitUs;
+using ::android::hardware::usb::gadget::linkFunction;
+using ::android::hardware::usb::gadget::resetGadget;
+using ::android::hardware::usb::gadget::setVidPid;
+using ::android::hardware::usb::gadget::unlinkFunctions;
 
-// Used for debug.
-static void displayInotifyEvent(struct inotify_event *i) {
-  ALOGE("    wd =%2d; ", i->wd);
-  if (i->cookie > 0) ALOGE("cookie =%4d; ", i->cookie);
-
-  ALOGE("mask = ");
-  if (i->mask & IN_ACCESS) ALOGE("IN_ACCESS ");
-  if (i->mask & IN_ATTRIB) ALOGE("IN_ATTRIB ");
-  if (i->mask & IN_CLOSE_NOWRITE) ALOGE("IN_CLOSE_NOWRITE ");
-  if (i->mask & IN_CLOSE_WRITE) ALOGE("IN_CLOSE_WRITE ");
-  if (i->mask & IN_CREATE) ALOGE("IN_CREATE ");
-  if (i->mask & IN_DELETE) ALOGE("IN_DELETE ");
-  if (i->mask & IN_DELETE_SELF) ALOGE("IN_DELETE_SELF ");
-  if (i->mask & IN_IGNORED) ALOGE("IN_IGNORED ");
-  if (i->mask & IN_ISDIR) ALOGE("IN_ISDIR ");
-  if (i->mask & IN_MODIFY) ALOGE("IN_MODIFY ");
-  if (i->mask & IN_MOVE_SELF) ALOGE("IN_MOVE_SELF ");
-  if (i->mask & IN_MOVED_FROM) ALOGE("IN_MOVED_FROM ");
-  if (i->mask & IN_MOVED_TO) ALOGE("IN_MOVED_TO ");
-  if (i->mask & IN_OPEN) ALOGE("IN_OPEN ");
-  if (i->mask & IN_Q_OVERFLOW) ALOGE("IN_Q_OVERFLOW ");
-  if (i->mask & IN_UNMOUNT) ALOGE("IN_UNMOUNT ");
-  ALOGE("\n");
-
-  if (i->len > 0) ALOGE("        name = %s\n", i->name);
-}
-
-static void *monitorFfs(void *param) {
-  UsbGadget *usbGadget = (UsbGadget *)param;
-  char buf[BUFFER_SIZE];
-  bool writeUdc = true, stopMonitor = false;
-  struct epoll_event events[EPOLL_EVENTS];
-  std::string gadgetName = GetProperty(USB_CONTROLLER_PROP, "");
-
-  if (gadgetName.empty()) {
-    ALOGE("UDC name not defined");
-    return NULL;
-  }
-
-  bool descriptorWritten = true;
-  for (int i = 0; i < static_cast<int>(usbGadget->mEndpointList.size()); i++) {
-    if (access(usbGadget->mEndpointList.at(i).c_str(), R_OK)) {
-      descriptorWritten = false;
-      break;
-    }
-  }
-
-  // notify here if the endpoints are already present.
-  if (descriptorWritten && !!WriteStringToFile(gadgetName, PULLUP_PATH)) {
-    lock_guard<mutex> lock(usbGadget->mLock);
-    usbGadget->mCurrentUsbFunctionsApplied = true;
-    gadgetPullup = true;
-    usbGadget->mCv.notify_all();
-  }
-
-  while (!stopMonitor) {
-    int nrEvents = epoll_wait(usbGadget->mEpollFd, events, EPOLL_EVENTS, -1);
-    if (nrEvents <= 0) {
-      ALOGE("epoll wait did not return descriptor number");
-      continue;
-    }
-
-    for (int i = 0; i < nrEvents; i++) {
-      ALOGI("event=%u on fd=%d\n", events[i].events, events[i].data.fd);
-
-      if (events[i].data.fd == usbGadget->mInotifyFd) {
-        // Process all of the events in buffer returned by read().
-        int numRead = read(usbGadget->mInotifyFd, buf, BUFFER_SIZE);
-        for (char *p = buf; p < buf + numRead;) {
-          struct inotify_event *event = (struct inotify_event *)p;
-          if (DEBUG) displayInotifyEvent(event);
-
-          p += sizeof(struct inotify_event) + event->len;
-
-          bool descriptorPresent = true;
-          for (int j = 0; j < static_cast<int>(usbGadget->mEndpointList.size());
-               j++) {
-            if (access(usbGadget->mEndpointList.at(j).c_str(), R_OK)) {
-              if (DEBUG)
-                ALOGI("%s absent", usbGadget->mEndpointList.at(j).c_str());
-              descriptorPresent = false;
-              break;
-            }
-          }
-
-          if (!descriptorPresent && !writeUdc) {
-            if (DEBUG) ALOGI("endpoints not up");
-            writeUdc = true;
-          } else if (descriptorPresent && writeUdc &&
-                     !!WriteStringToFile(gadgetName, PULLUP_PATH)) {
-            lock_guard<mutex> lock(usbGadget->mLock);
-            usbGadget->mCurrentUsbFunctionsApplied = true;
-            ALOGI("GADGET pulled up");
-            writeUdc = false;
-            gadgetPullup = true;
-            // notify the main thread to signal userspace.
-            usbGadget->mCv.notify_all();
-          }
-        }
-      } else {
-        uint64_t flag;
-        read(usbGadget->mEventFd, &flag, sizeof(flag));
-        if (flag == 100) {
-          stopMonitor = true;
-          break;
-        }
-      }
-    }
-  }
-  return NULL;
-}
-
-UsbGadget::UsbGadget()
-    : mMonitorCreated(false),
-      mCurrentUsbFunctionsApplied(false) {
+UsbGadget::UsbGadget(const char* const gadget)
+    : mCurrentUsbFunctionsApplied(false),
+      mMonitorFfs(gadget) {
   if (access(OS_DESC_PATH, R_OK) != 0)
     ALOGE("configfs setup not done yet");
-}
-
-static int unlinkFunctions(const char *path) {
-  DIR *config = opendir(path);
-  struct dirent *function;
-  char filepath[MAX_FILE_PATH_LENGTH];
-  int ret = 0;
-
-  if (config == NULL) return -1;
-
-  // d_type does not seems to be supported in /config
-  // so filtering by name.
-  while (((function = readdir(config)) != NULL)) {
-    if ((strstr(function->d_name, FUNCTION_NAME) == NULL)) continue;
-    // build the path for each file in the folder.
-    snprintf(filepath, sizeof(filepath), "%s/%s", path, function->d_name);
-    ret = remove(filepath);
-    if (ret) {
-      ALOGE("Unable  remove file %s errno:%d", filepath, errno);
-      break;
-    }
-  }
-
-  closedir(config);
-  return ret;
-}
-
-static int addEpollFd(const unique_fd &epfd, const unique_fd &fd) {
-  struct epoll_event event;
-  int ret;
-
-  event.data.fd = fd;
-  event.events = EPOLLIN;
-
-  ret = epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &event);
-  if (ret) ALOGE("epoll_ctl error %d", errno);
-
-  return ret;
 }
 
 Return<void> UsbGadget::getCurrentUsbFunctions(
@@ -244,59 +94,180 @@ Return<void> UsbGadget::getCurrentUsbFunctions(
   return Void();
 }
 
-V1_0::Status UsbGadget::tearDownGadget() {
-  ALOGI("setCurrentUsbFunctions None");
-
-  if (!WriteStringToFile("none", PULLUP_PATH))
-    ALOGI("Gadget cannot be pulled down");
-
-  if (!WriteStringToFile("0", DEVICE_CLASS_PATH)) return Status::ERROR;
-
-  if (!WriteStringToFile("0", DEVICE_SUB_CLASS_PATH)) return Status::ERROR;
-
-  if (!WriteStringToFile("0", DEVICE_PROTOCOL_PATH)) return Status::ERROR;
-
-  if (!WriteStringToFile("0", DESC_USE_PATH)) return Status::ERROR;
-
-  if (unlinkFunctions(CONFIG_PATH)) return Status::ERROR;
-
-  if (mMonitorCreated) {
-    uint64_t flag = 100;
-    // Stop the monitor thread by writing into signal fd.
-    write(mEventFd, &flag, sizeof(flag));
-    mMonitor->join();
-    mMonitorCreated = false;
-    ALOGI("mMonitor destroyed");
-  } else {
-    ALOGI("mMonitor not running");
+Return<Status> UsbGadget::reset() {
+  if (!WriteStringToFile("none", PULLUP_PATH)) {
+    ALOGE("reset(): unable to clear pullup");
+    return Status::ERROR;
   }
 
-  mInotifyFd.reset(-1);
-  mEventFd.reset(-1);
-  mEpollFd.reset(-1);
-  mEndpointList.clear();
   return Status::SUCCESS;
 }
 
-static int linkFunction(const char *function, int index) {
-  char functionPath[MAX_FILE_PATH_LENGTH];
-  char link[MAX_FILE_PATH_LENGTH];
+V1_0::Status UsbGadget::tearDownGadget() {
+  if (resetGadget() != Status::SUCCESS) return Status::ERROR;
 
-  snprintf(functionPath, sizeof(functionPath), "%s%s", FUNCTIONS_PATH, function);
-  snprintf(link, sizeof(link), "%s%d", FUNCTION_PATH, index);
-  if (symlink(functionPath, link)) {
-    ALOGE("Cannot create symlink %s -> %s errno:%d", link, functionPath, errno);
-    return -1;
+  if (mMonitorFfs.isMonitorRunning())
+    mMonitorFfs.reset();
+  else
+    ALOGE("mMonitor not running");
+
+  return Status::SUCCESS;
+}
+
+static std::map<std::string, std::pair<const char *, const char *> >
+supported_compositions {
+  { "mass_storage", { "0x05C6", "0xF000" } },
+  { "mass_storage,adb", { "0x05C6", "0x9015" } },
+  { "diag,adb", { "0x05C6", "0x901D" } },
+  { "diag", { "0x05C6", "0x900E" } },
+  { "diag,serial_cdev,rmnet,adb", { "0x05C6", "0x9091" } },
+  { "diag,serial_cdev,rmnet", { "0x05C6", "0x9092" } },
+  { "rndis", { "0x05C6", "0xF00E" } },
+  { "rndis,adb", { "0x05C6", "0x9024" } },
+  { "rndis,diag", { "0x05C6", "0x902C" } },
+  { "rndis,diag,adb", { "0x05C6", "0x902D" } },
+  { "rndis,serial_cdev", { "0x05C6", "0x90B3" } },
+  { "rndis,serial_cdev,adb", { "0x05C6", "0x90B4" } },
+  { "rndis,serial_cdev,diag,", { "0x05C6", "0x90B5" } },
+  { "rndis,serial_cdev,diag,adb", { "0x05C6", "0x90B6" } },
+  { "mtp,diag", { "0x05C6", "0x901B" } },
+  { "mtp,diag,adb", { "0x05C6", "0x903A" } },
+  { "diag,qdss", { "0x05C6", "0x904A" } },
+  { "diag,qdss,adb", { "0x05C6", "0x9060" } },
+  { "rndis,diag,qdss", { "0x05C6", "0x9081" } },
+  { "rndis,diag,qdss,adb", { "0x05C6", "0x9082" } },
+  { "diag,qdss,rmnet", { "0x05C6", "0x9083" } },
+  { "diag,qdss,rmnet,adb", { "0x05C6", "0x9084" } },
+  { "ncm", { "0x05C6", "0xA4A1" } },
+  { "ncm,adb", { "0x05C6", "0x908C" } },
+  { "diag,serial_cdev", { "0x05C6", "0x9004" } },
+  { "diag,serial_cdev,rmnet,dpl", { "0x05C6", "0x90B7" } },
+  { "diag,serial_cdev,rmnet,dpl,adb", { "0x05C6", "0x90B8" } },
+  { "rndis,diag,dpl", { "0x05C6", "0x90BF" } },
+  { "rndis,diag,dpl,adb", { "0x05C6", "0x90C0" } },
+  { "ccid", { "0x05C6", "0x90CE" } },
+  { "ccid,adb", { "0x05C6", "0x90CF" } },
+  { "ccid,diag", { "0x05C6", "0x90D0" } },
+  { "ccid,diag,adb", { "0x05C6", "0x90D1" } },
+  { "diag,serial_cdev,rmnet,ccid", { "0x05C6", "0x90D2" } },
+  { "diag,serial_cdev,rmnet,ccid,adb", { "0x05C6", "0x90D3" } },
+  { "diag,diag_mdm,qdss,qdss_mdm,serial_cdev,serial_cdev_mdm,rmnet",
+      { "0x05C6", "0x90D7" } },
+  { "diag,diag_mdm,qdss,qdss_mdm,serial_cdev,serial_cdev_mdm,rmnet,adb",
+      { "0x05C6", "0x90D8" } },
+  { "diag,diag_mdm,qdss,qdss_mdm,serial_cdev,serial_cdev_mdm,dpl,rmnet",
+      { "0x05C6", "0x90DD" } },
+  { "diag,diag_mdm,qdss,qdss_mdm,serial_cdev,serial_cdev_mdm,dpl,rmnet,adb",
+      { "0x05C6", "0x90DE" } },
+  { "diag,serial_cdev,rmnet,dpl,qdss", { "0x05C6", "0x90DC" } },
+  { "diag,serial_cdev,rmnet,dpl,qdss,adb", { "0x05C6", "0x90DB" } },
+  { "diag,uac2,adb", { "0x05C6", "0x90CA" } },
+  { "diag,uac2", { "0x05C6", "0x901C" } },
+  { "diag,uvc,adb", { "0x05C6", "0x90CB" } },
+  { "diag,uvc", { "0x05C6", "0x90DF" } },
+  { "diag,uac2,uvc,adb", { "0x05C6", "0x90CC" } },
+  { "diag,uac2,uvc", { "0x05C6", "0x90E0" } },
+  { "diag,diag_mdm,qdss,qdss_mdm,serial_cdev,dpl,rmnet",
+      { "0x05C6", "0x90E4" } },
+  { "diag,diag_mdm,qdss,qdss_mdm,serial_cdev,dpl,rmnet,adb",
+      { "0x05C6", "0x90E5" } },
+  { "rndis,diag,diag_mdm,qdss,qdss_mdm,serial_cdev,dpl",
+      { "0x05C6", "0x90E6" } },
+  { "rndis,diag,diag_mdm,qdss,qdss_mdm,serial_cdev,dpl,adb",
+      { "0x05C6", "0x90E7" } },
+  { "rndis,diag,qdss,serial_cdev,dpl", { "0x05C6", "0x90E8" } },
+  { "rndis,diag,qdss,serial_cdev,dpl,adb", { "0x05C6", "0x90E9" } },
+  { "diag,diag_mdm,adb", { "0x05C6", "0x90D9" } },
+  { "diag,diag_mdm,diag_mdm2,qdss,qdss_mdm,serial_cdev,dpl,rmnet",
+      { "0x05C6", "0x90F6" } },
+  { "diag,diag_mdm,diag_mdm2,qdss,qdss_mdm,serial_cdev,dpl,rmnet,adb",
+      { "0x05C6", "0x90F7" } },
+  { "rndis,diag,diag_mdm,diag_mdm2,qdss,qdss_mdm,serial_cdev,dpl",
+      { "0x05C6", "0x90F8" } },
+  { "rndis,diag,diag_mdm,diag_mdm2,qdss,qdss_mdm,serial_cdev,dpl,adb",
+      { "0x05C6", "0x90F9" } },
+  { "diag,diag_mdm,qdss_mdm,dpl,adb", { "0x05C6", "0x90FF" } },
+  { "diag,qdss,dpl,adb", { "0x05C6", "0x9104" } },
+  { "diag,dpl", { "0x05C6", "0x9105" } },
+  { "diag,diag_cnss,serial_cdev,rmnet,dpl,qdss,adb", { "0x05C6", "0x9110" } },
+  { "diag,diag_cnss,serial_cdev,rmnet,dpl,qdss", { "0x05C6", "0x9111" } },
+};
+
+static std::string rndisFuncname() {
+  std::string rndisFunc = GetProperty(RNDIS_FUNC_NAME_PROP, "");
+
+  if (rndisFunc.empty()) {
+    return "rndis";
   }
+
+  return rndisFunc + ".rndis";
+}
+
+static std::map<std::string, std::function<std::string()> > supported_funcs {
+  { "adb",              [](){ return "ffs.adb"; } },
+  { "ccid",             [](){ return "ccid.ccid"; } },
+  { "diag",             [](){ return GetProperty(DIAG_FUNC_NAME_PROP, "diag") + ".diag"; } },
+  { "diag_cnss",        [](){ return GetProperty(DIAG_FUNC_NAME_PROP, "diag") + ".diag_mdm2"; } },
+  { "diag_mdm2",        [](){ return GetProperty(DIAG_FUNC_NAME_PROP, "diag") + ".diag_mdm2"; } },
+  { "diag_mdm",         [](){ return GetProperty(DIAG_FUNC_NAME_PROP, "diag") + ".diag_mdm"; } },
+  { "dpl",              [](){ return GetProperty(RMNET_FUNC_NAME_PROP, "gsi") + "." + GetProperty(DPL_INST_NAME_PROP, "dpl"); } },
+  { "mass_storage",     [](){ return "mass_storage.0"; } },
+  { "mtp",              [](){ return "ffs.mtp"; } },
+  { "ncm",              [](){ return "ncm.0"; } },
+  { "ptp",              [](){ return "ffs.ptp"; } },
+  { "qdss",             [](){ return "qdss." + GetProperty(QDSS_INST_NAME_PROP, "qdss"); } },
+  { "qdss_mdm",         [](){ return "qdss.qdss_mdm"; } },
+  { "rmnet",            [](){ return GetProperty(RMNET_FUNC_NAME_PROP, "gsi") + "." + GetProperty(RMNET_INST_NAME_PROP, "rmnet"); } },
+  { "rndis",            rndisFuncname },
+  { "serial_cdev",      [](){ return "cser.dun.0"; } },
+  { "serial_cdev_mdm",  [](){ return "cser.dun.2"; } },
+  { "uac2",             [](){ return "uac2.0"; } },
+  { "uvc",              [](){ return "uvc.0"; } },
+};
+
+static int addFunctionsFromPropString(std::string prop, int &i, bool adb) {
+  // tokenize the prop string and add each function individually
+  for (size_t start = 0; start != std::string::npos; ) {
+    size_t end = prop.find_first_of(',', start);
+    std::string funcname;
+    if (end == std::string::npos) {
+      funcname = prop.substr(start, prop.length() - start);
+      start = end;
+    } else {
+      funcname = prop.substr(start, end - start);
+      start = end + 1;
+    }
+
+    if (!adb && funcname == "adb")
+      continue;
+
+    if (!supported_funcs.count(funcname)) {
+      ALOGE("Function \"%s\" unsupported", funcname.c_str());
+      return -1;
+    }
+
+    ALOGI("Adding %s", funcname.c_str());
+    if (linkFunction(supported_funcs[funcname]().c_str(), i++))
+      return -1;
+  }
+
   return 0;
 }
 
-static V1_0::Status setVidPid(const char *vid, const char *pid) {
-  if (!WriteStringToFile(vid, VENDOR_ID_PATH)) return Status::ERROR;
+static int lookupAndSetVidPid(std::string prop) {
+  if (!supported_compositions.count(prop)) {
+    ALOGE("Composition \"%s\" unsupported", prop.c_str());
+    return -1;
+  }
 
-  if (!WriteStringToFile(pid, PRODUCT_ID_PATH)) return Status::ERROR;
+  auto comp = supported_compositions[prop];
+  std::string vid = comp.first;
+  std::string pid = comp.second;
 
-  return Status::SUCCESS;
+  if (setVidPid(vid.c_str(), pid.c_str()) != Status::SUCCESS)
+    return -1;
+
+  return 0;
 }
 
 static V1_0::Status validateAndSetVidPid(uint64_t functions) {
@@ -397,150 +368,96 @@ done:
 V1_0::Status UsbGadget::setupFunctions(
     uint64_t functions, const sp<V1_0::IUsbGadgetCallback> &callback,
     uint64_t timeout) {
-  std::unique_lock<std::mutex> lk(mLock);
-
-  unique_fd inotifyFd(inotify_init());
-  if (inotifyFd < 0) {
-    ALOGE("inotify init failed");
-    return Status::ERROR;
-  }
-
   bool ffsEnabled = false;
   int i = 0;
+  const char *comp;
   enum mdmType mtype;
   std::string gadgetName = GetProperty(USB_CONTROLLER_PROP, "");
-  std::string rndisFunc = GetProperty(RNDIS_FUNC_NAME_PROP, "");
-  std::string rmnetFunc = GetProperty(RMNET_FUNC_NAME_PROP, "");
-  std::string rmnetInst = GetProperty(RMNET_INST_NAME_PROP, "");
-  std::string dplInst = GetProperty(DPL_INST_NAME_PROP, "");
-  std::string vendorProp = GetProperty(PERSIST_VENDOR_USB_PROP, "");
+  std::string vendorProp = GetProperty(VENDOR_USB_PROP, GetProperty(PERSIST_VENDOR_USB_PROP, ""));
 
   if (gadgetName.empty()) {
     ALOGE("UDC name not defined");
     return Status::ERROR;
   }
 
-  if (rmnetInst.empty()) {
-    ALOGE("rmnetinstance not defined");
-    rmnetInst = "rmnet";
-  }
-
-  if (dplInst.empty()) {
-    ALOGE("dplinstance not defined");
-    dplInst = "dpl";
-  }
-
-  rmnetInst = rmnetFunc + "." + rmnetInst;
-  dplInst = rmnetFunc + "." + dplInst;
-
-  if ((functions & GadgetFunction::MTP) != 0) {
-    ALOGI("setCurrentUsbFunctions mtp");
-    if (!WriteStringToFile("1", DESC_USE_PATH)) return Status::ERROR;
-    if (linkFunction("mtp.gs0", i++)) return Status::ERROR;
-  }
-
-  if ((functions & GadgetFunction::PTP) != 0) {
-    ALOGI("setCurrentUsbFunctions ptp");
-    if (!WriteStringToFile("1", DESC_USE_PATH)) return Status::ERROR;
-    if (linkFunction("ptp.gs1", i++)) return Status::ERROR;
-  }
-
-  if ((functions & GadgetFunction::MIDI) != 0) {
-    ALOGI("setCurrentUsbFunctions MIDI");
-    if (linkFunction("midi.gs5", i++)) return Status::ERROR;;
-  }
-
-  if ((functions & GadgetFunction::ACCESSORY) != 0) {
-    ALOGI("setCurrentUsbFunctions Accessory");
-    if (linkFunction("accessory.gs2", i++)) return Status::ERROR;
-  }
-
-  if ((functions & GadgetFunction::AUDIO_SOURCE) != 0) {
-    ALOGI("setCurrentUsbFunctions Audio Source");
-    if (linkFunction("audio_source.gs3", i++)) return Status::ERROR;
-  }
-
   mtype = getModemType();
   if ((functions & GadgetFunction::RNDIS) != 0) {
     ALOGI("setCurrentUsbFunctions rndis");
-    if (linkFunction((rndisFunc + ".rndis").c_str(), i++))
-      return Status::ERROR;
+
+    // for RNDIS+ADB, additional functions (diag, etc) depending on modem type
     if (functions & GadgetFunction::ADB) {
-      if (mtype == EXTERNAL || mtype == INTERNAL_EXTERNAL) {
-        ALOGI("esoc RNDIS default composition");
-        if (linkFunction("diag.diag", i++)) return Status::ERROR;
-        if (linkFunction("diag.diag_mdm", i++)) return Status::ERROR;
-        if (linkFunction("qdss.qdss", i++)) return Status::ERROR;
-        if (linkFunction("qdss.qdss_mdm", i++)) return Status::ERROR;
-        if (linkFunction("cser.dun.0", i++)) return Status::ERROR;
-        if (linkFunction(dplInst.c_str(), i++))
-          return Status::ERROR;
-        if (setVidPid("0x05c6", "0x90e7") != Status::SUCCESS)
-          return Status::ERROR;
-      } else if (mtype == INTERNAL) {
-        ALOGI("RNDIS default composition");
-        if (linkFunction("diag.diag", i++)) return Status::ERROR;
-        if (linkFunction("qdss.qdss", i++)) return Status::ERROR;
-        if (linkFunction("cser.dun.0", i++)) return Status::ERROR;
-        if (linkFunction(dplInst.c_str(), i++))
-          return Status::ERROR;
-        if (setVidPid("0x05c6", "0x90e9") != Status::SUCCESS)
-          return Status::ERROR;
+      switch (mtype) {
+      case EXTERNAL:
+      case INTERNAL_EXTERNAL:
+        comp = "rndis,diag,diag_mdm,qdss,qdss_mdm,serial_cdev,dpl,adb";
+        break;
+      case INTERNAL:
+        comp = "rndis,diag,qdss,serial_cdev,dpl,adb";
+        break;
+      default:
+        comp = "rndis,adb";
+        break;
       }
+
+      ALOGI("RNDIS+ADB QC default composition: %s", comp);
+      if (addFunctionsFromPropString(comp, i, false))
+        return Status::ERROR;
+      if (lookupAndSetVidPid(comp))
+        return Status::ERROR;
+    } else if (linkFunction(rndisFuncname().c_str(), i++)) {
+      return Status::ERROR;
     }
+  } else if (addGenericAndroidFunctions(&mMonitorFfs, functions, &ffsEnabled, &i)
+              != Status::SUCCESS) {
+    return Status::ERROR;
   }
 
-  /* override adb-only with additional QTI functions */
+  // override adb-only with additional QTI functions
   if (i == 0 && functions & GadgetFunction::ADB) {
-    /* vendor defined functions if any run from vendor rc file */
+    // If persist.vendor.usb.config or vendor.usb.config is set, look it up, parse it,
+    // and link each function into the composition
     if (!vendorProp.empty()) {
-      ALOGI("enable vendor usb config composition");
-      SetProperty("vendor.usb.config", vendorProp);
-      return Status::SUCCESS;
+      // tack on ADB to the property if not there, since we only arrive here
+      // if "USB debugging enabled" is chosen which implies ADB
+      if (vendorProp.find("adb") == std::string::npos)
+        vendorProp += ",adb";
+
+      ALOGI("setting composition from %s: %s", VENDOR_USB_PROP,
+              vendorProp.c_str());
+      if (!addFunctionsFromPropString(vendorProp, i, false))
+        if (!lookupAndSetVidPid(vendorProp))
+          goto enable_adb;
+
+      // if failed, then use below default compositions
+      unlinkFunctions(CONFIG_PATH);
+      i = 0;
     }
 
-    if (mtype == EXTERNAL || mtype == INTERNAL_EXTERNAL) {
-      ALOGI("esoc default composition");
-      if (linkFunction("diag.diag", i++)) return Status::ERROR;
-      if (linkFunction("diag.diag_mdm", i++)) return Status::ERROR;
-      if (linkFunction("qdss.qdss", i++)) return Status::ERROR;
-      if (linkFunction("qdss.qdss_mdm", i++)) return Status::ERROR;
-      if (linkFunction("cser.dun.0", i++)) return Status::ERROR;
-      if (linkFunction(dplInst.c_str(), i++))
-        return Status::ERROR;
-      if (linkFunction(rmnetInst.c_str(), i++))
-        return Status::ERROR;
-      if (setVidPid("0x05c6", "0x90e5") != Status::SUCCESS)
-        return Status::ERROR;
-    } else if (mtype == NONE) {
-      ALOGI("enable APQ default composition");
-      if (linkFunction("diag.diag", i++)) return Status::ERROR;
-      if (setVidPid("0x05c6", "0x901d") != Status::SUCCESS)
-        return Status::ERROR;
-    } else {
-      ALOGI("enable QC default composition");
-      if (linkFunction("diag.diag", i++)) return Status::ERROR;
-      if (linkFunction("cser.dun.0", i++)) return Status::ERROR;
-      if (linkFunction(rmnetInst.c_str(), i++))
-        return Status::ERROR;
-      if (linkFunction(dplInst.c_str(), i++))
-        return Status::ERROR;
-      if (linkFunction("qdss.qdss", i++)) return Status::ERROR;
-      if (setVidPid("0x05c6", "0x90db") != Status::SUCCESS)
-        return Status::ERROR;
+    switch (mtype) {
+    case EXTERNAL:
+    case INTERNAL_EXTERNAL:
+      comp = "diag,diag_mdm,qdss,qdss_mdm,serial_cdev,dpl,rmnet,adb";
+      break;
+    case INTERNAL:
+      comp = "diag,serial_cdev,rmnet,dpl,qdss,adb";
+      break;
+    default:
+      comp = "diag,adb";
+      break;
     }
+
+    ALOGI("enable QC default composition: %s", comp);
+    if (addFunctionsFromPropString(comp, i, false))
+      return Status::ERROR;
+    if (lookupAndSetVidPid(comp))
+      return Status::ERROR;
   }
 
+enable_adb:
+  // finally add ADB at the end if enabled
   if ((functions & GadgetFunction::ADB) != 0) {
     ffsEnabled = true;
-    ALOGI("setCurrentUsbFunctions Adb");
-    if (inotify_add_watch(inotifyFd, "/dev/usb-ffs/adb/", IN_ALL_EVENTS) == -1)
-      return Status::ERROR;
-
-    if (linkFunction("ffs.adb", i++)) return Status::ERROR;
-    mEndpointList.push_back("/dev/usb-ffs/adb/ep1");
-    mEndpointList.push_back("/dev/usb-ffs/adb/ep2");
-    ALOGI("Service started");
+    if (addAdb(&mMonitorFfs, &i) != Status::SUCCESS) return Status::ERROR;
   }
 
   // Pull up the gadget right away when there are no ffs functions.
@@ -549,45 +466,23 @@ V1_0::Status UsbGadget::setupFunctions(
     mCurrentUsbFunctionsApplied = true;
     if (callback)
       callback->setCurrentUsbFunctionsCb(functions, Status::SUCCESS);
+    ALOGI("Gadget pullup without FFS fuctions");
     return Status::SUCCESS;
   }
-
-  unique_fd eventFd(eventfd(0, 0));
-  if (eventFd == -1) {
-    ALOGE("mEventFd failed to create %d", errno);
-    return Status::ERROR;
-  }
-
-  unique_fd epollFd(epoll_create(2));
-  if (epollFd == -1) {
-    ALOGE("mEpollFd failed to create %d", errno);
-    return Status::ERROR;
-  }
-
-  if (addEpollFd(epollFd, inotifyFd) == -1) return Status::ERROR;
-
-  if (addEpollFd(epollFd, eventFd) == -1) return Status::ERROR;
-
-  mEpollFd = move(epollFd);
-  mInotifyFd = move(inotifyFd);
-  mEventFd = move(eventFd);
-  gadgetPullup = false;
 
   // Monitors the ffs paths to pull up the gadget when descriptors are written.
   // Also takes of the pulling up the gadget again if the userspace process
   // dies and restarts.
-  mMonitor = unique_ptr<thread>(new thread(monitorFfs, this));
-  mMonitorCreated = true;
-  if (DEBUG) ALOGI("Mainthread in Cv");
+  mMonitorFfs.registerFunctionsAppliedCallback(
+      [](bool functionsApplied, void *payload) {
+        ((UsbGadget*)payload)->mCurrentUsbFunctionsApplied = functionsApplied;
+      }, this);
+  mMonitorFfs.startMonitor();
+
+  ALOGI("Started monitor for FFS functions");
 
   if (callback) {
-    if (mCv.wait_for(lk, timeout * 1ms, [] { return gadgetPullup; })) {
-      ALOGI("monitorFfs signalled true");
-    } else {
-      ALOGI("monitorFfs signalled error");
-      // continue monitoring as the descriptors might be written at a later
-      // point.
-    }
+    bool gadgetPullup = mMonitorFfs.waitForPullUp(timeout);
     Return<void> ret = callback->setCurrentUsbFunctionsCb(
         functions, gadgetPullup ? Status::SUCCESS : Status::ERROR);
     if (!ret.isOk())
@@ -612,7 +507,7 @@ Return<void> UsbGadget::setCurrentUsbFunctions(
   }
 
   // Leave the gadget pulled down to give time for the host to sense disconnect.
-  usleep(DISCONNECT_WAIT_US);
+  usleep(kDisconnectWaitUs);
 
   if (functions == static_cast<uint64_t>(GadgetFunction::NONE)) {
     if (callback == NULL) return Void();
@@ -648,19 +543,28 @@ error:
   return Void();
 }
 }  // namespace implementation
-}  // namespace V1_0
+}  // namespace V1_1
 }  // namespace gadget
 }  // namespace usb
 }  // namespace hardware
 }  // namespace android
 
 int main() {
+  using android::base::GetProperty;
   using android::hardware::configureRpcThreadpool;
   using android::hardware::joinRpcThreadpool;
-  using android::hardware::usb::gadget::V1_0::IUsbGadget;
-  using android::hardware::usb::gadget::V1_0::implementation::UsbGadget;
+  using android::hardware::usb::gadget::V1_1::IUsbGadget;
+  using android::hardware::usb::gadget::V1_1::implementation::UsbGadget;
 
-  android::sp<IUsbGadget> service = new UsbGadget();
+  std::string gadgetName = GetProperty("persist.vendor.usb.controller",
+      GetProperty(USB_CONTROLLER_PROP, ""));
+
+  if (gadgetName.empty()) {
+    ALOGE("UDC name not defined");
+    return -1;
+  }
+
+  android::sp<IUsbGadget> service = new UsbGadget(gadgetName.c_str());
 
   configureRpcThreadpool(1, true /*callerWillJoin*/);
   android::status_t status = service->registerAsService();

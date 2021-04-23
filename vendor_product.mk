@@ -11,7 +11,10 @@ ifneq ($(TARGET_KERNEL_VERSION),$(filter $(TARGET_KERNEL_VERSION),4.9 4.14))
 endif
 
 ifeq ($(TARGET_USES_USB_GADGET_HAL), true)
-  PRODUCT_PACKAGES += android.hardware.usb.gadget@1.0-service-qti
+  PRODUCT_PROPERTY_OVERRIDES += vendor.usb.use_gadget_hal=1
+  PRODUCT_PACKAGES += android.hardware.usb.gadget@1.1-service-qti
+else
+  PRODUCT_PROPERTY_OVERRIDES += vendor.usb.use_gadget_hal=0
 endif
 
 #
@@ -22,7 +25,13 @@ PRODUCT_PROPERTY_OVERRIDES += vendor.usb.rndis.func.name=gsi
 PRODUCT_PROPERTY_OVERRIDES += vendor.usb.rmnet.func.name=gsi
 PRODUCT_PROPERTY_OVERRIDES += vendor.usb.rmnet.inst.name=rmnet
 PRODUCT_PROPERTY_OVERRIDES += vendor.usb.dpl.inst.name=dpl
-PRODUCT_PROPERTY_OVERRIDES += vendor.usb.qdss.inst.name=qdss
+
+# QDSS uses SW path on these targets
+ifneq ($(filter lahaina taro,$(TARGET_BOARD_PLATFORM)),)
+  PRODUCT_PROPERTY_OVERRIDES += vendor.usb.qdss.inst.name=qdss_mdm
+else
+  PRODUCT_PROPERTY_OVERRIDES += vendor.usb.qdss.inst.name=qdss
+endif
 
 ifeq ($(TARGET_HAS_DIAG_ROUTER),true)
   PRODUCT_PROPERTY_OVERRIDES += vendor.usb.diag.func.name=ffs
