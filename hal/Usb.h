@@ -6,6 +6,7 @@
 #include <android/hardware/usb/1.2/IUsbCallback.h>
 #include <hidl/Status.h>
 #include <utils/Log.h>
+#include <android-base/properties.h>
 
 #define UEVENT_MSG_LEN 2048
 // The type-c stack waits for 4.5 - 5.5 secs before declaring a port non-pd.
@@ -41,6 +42,8 @@ using ::android::hardware::hidl_string;
 using ::android::hardware::hidl_vec;
 using ::android::hardware::Return;
 using ::android::hardware::Void;
+using ::android::base::SetProperty;
+using ::android::base::GetProperty;
 using ::android::sp;
 
 struct Usb : public IUsb {

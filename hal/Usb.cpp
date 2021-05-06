@@ -40,6 +40,9 @@
 
 #include "Usb.h"
 
+#define VENDOR_USB_ADB_DISABLED_PROP "vendor.sys.usb.adb.disabled"
+#define USB_CONTROLLER_PROP "vendor.usb.controller"
+
 namespace android {
 namespace hardware {
 namespace usb {
@@ -720,10 +723,15 @@ static void handle_psy_uevent(Usb *usb, const char *msg)
 static void uevent_event(uint32_t /*epevents*/, struct data *payload) {
   char msg[UEVENT_MSG_LEN + 2];
   int n;
+  std::string gadgetName = GetProperty(USB_CONTROLLER_PROP, "");
   static std::regex add_regex("add@(/devices/platform/soc/.*dwc3/xhci-hcd\\.\\d\\.auto/"
                               "usb\\d/\\d-\\d(?:/[\\d\\.-]+)*)");
   static std::regex bind_regex("bind@(/devices/platform/soc/.*dwc3/xhci-hcd\\.\\d\\.auto/"
                                "usb\\d/\\d-\\d(?:/[\\d\\.-]+)*)/([^/]*:[^/]*)");
+  static std::regex host_regex("add@/devices/platform/soc/.*" + gadgetName +
+                               "/xhci-hcd\\.\\d\\.auto");
+  static std::regex peripheral_regex("remove@/devices/platform/soc/.*" + gadgetName +
+                                     "/xhci-hcd\\.\\d\\.auto");
 
   n = uevent_kernel_multicast_recv(payload->uevent_fd, msg, UEVENT_MSG_LEN);
   if (n <= 0) return;
@@ -750,6 +758,10 @@ static void uevent_event(uint32_t /*epevents*/, struct data *payload) {
       std::csub_match intfpath = match[2];
       checkUsbInterfaceAutoSuspend("/sys" + devpath.str(), intfpath.str());
     }
+  } else   if (std::regex_match(msg, host_regex)) {
+    SetProperty(VENDOR_USB_ADB_DISABLED_PROP, "1");
+  } else   if (std::regex_match(msg, peripheral_regex)) {
+    SetProperty(VENDOR_USB_ADB_DISABLED_PROP, "0");
   }
 }
 
