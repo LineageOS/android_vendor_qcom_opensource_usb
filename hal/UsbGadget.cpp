@@ -42,6 +42,7 @@
 #define DPL_INST_NAME_PROP "vendor.usb.dpl.inst.name"
 #define VENDOR_USB_PROP "vendor.usb.config"
 #define PERSIST_VENDOR_USB_PROP "persist.vendor.usb.config"
+#define PERSIST_VENDOR_USB_EXTRA_PROP "persist.vendor.usb.config.extra"
 #define QDSS_INST_NAME_PROP "vendor.usb.qdss.inst.name"
 
 enum mdmType {
@@ -77,7 +78,7 @@ using ::android::hardware::usb::gadget::unlinkFunctions;
 UsbGadget::UsbGadget(const char* const gadget)
     : mCurrentUsbFunctionsApplied(false),
       mMonitorFfs(gadget) {
-  if (access(OS_DESC_PATH, R_OK) != 0)
+  if (access(CONFIG_PATH, R_OK) != 0)
     ALOGE("configfs setup not done yet");
 }
 
@@ -105,6 +106,9 @@ Return<Status> UsbGadget::reset() {
 
 V1_0::Status UsbGadget::tearDownGadget() {
   if (resetGadget() != Status::SUCCESS) return Status::ERROR;
+
+  if (remove(OS_DESC_PATH))
+    ALOGI("Unable to remove file %s errno:%d", OS_DESC_PATH, errno);
 
   if (mMonitorFfs.isMonitorRunning())
     mMonitorFfs.reset();
@@ -374,6 +378,7 @@ V1_0::Status UsbGadget::setupFunctions(
   enum mdmType mtype;
   std::string gadgetName = GetProperty(USB_CONTROLLER_PROP, "");
   std::string vendorProp = GetProperty(VENDOR_USB_PROP, GetProperty(PERSIST_VENDOR_USB_PROP, ""));
+  std::string vendorExtraProp = GetProperty(PERSIST_VENDOR_USB_EXTRA_PROP, "none");
 
   if (gadgetName.empty()) {
     ALOGE("UDC name not defined");
@@ -383,26 +388,14 @@ V1_0::Status UsbGadget::setupFunctions(
   mtype = getModemType();
   if ((functions & GadgetFunction::RNDIS) != 0) {
     ALOGI("setCurrentUsbFunctions rndis");
+    if (vendorExtraProp != "none") {
+      std::string rndisComp = "rndis," + vendorExtraProp;
 
-    // for RNDIS+ADB, additional functions (diag, etc) depending on modem type
-    if (functions & GadgetFunction::ADB) {
-      switch (mtype) {
-      case EXTERNAL:
-      case INTERNAL_EXTERNAL:
-        comp = "rndis,diag,diag_mdm,qdss,qdss_mdm,serial_cdev,dpl,adb";
-        break;
-      case INTERNAL:
-        comp = "rndis,diag,qdss,serial_cdev,dpl,adb";
-        break;
-      default:
-        comp = "rndis,adb";
-        break;
-      }
-
-      ALOGI("RNDIS+ADB QC default composition: %s", comp);
-      if (addFunctionsFromPropString(comp, i, false))
+      if (functions & GadgetFunction::ADB)
+        rndisComp += ",adb";
+      if (addFunctionsFromPropString(rndisComp, i, false))
         return Status::ERROR;
-      if (lookupAndSetVidPid(comp))
+      if (lookupAndSetVidPid(rndisComp))
         return Status::ERROR;
     } else if (linkFunction(rndisFuncname().c_str(), i++)) {
       return Status::ERROR;
@@ -458,6 +451,13 @@ enable_adb:
   if ((functions & GadgetFunction::ADB) != 0) {
     ffsEnabled = true;
     if (addAdb(&mMonitorFfs, &i) != Status::SUCCESS) return Status::ERROR;
+  }
+
+  if (functions & (GadgetFunction::ADB | GadgetFunction::MTP | GadgetFunction::PTP)) {
+    if (symlink(CONFIG_PATH, OS_DESC_PATH)) {
+      ALOGE("Cannot create symlink %s -> %s errno:%d", CONFIG_PATH, OS_DESC_PATH, errno);
+      return Status::ERROR;
+    }
   }
 
   // Pull up the gadget right away when there are no ffs functions.
