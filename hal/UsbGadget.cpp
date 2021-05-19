@@ -385,21 +385,20 @@ V1_0::Status UsbGadget::setupFunctions(
     return Status::ERROR;
   }
 
-  mtype = getModemType();
   if ((functions & GadgetFunction::RNDIS) != 0) {
     ALOGI("setCurrentUsbFunctions rndis");
-    if (vendorExtraProp != "none") {
-      std::string rndisComp = "rndis," + vendorExtraProp;
+    std::string rndisComp = "rndis";
 
-      if (functions & GadgetFunction::ADB)
-        rndisComp += ",adb";
-      if (addFunctionsFromPropString(rndisComp, i, false))
-        return Status::ERROR;
-      if (lookupAndSetVidPid(rndisComp))
-        return Status::ERROR;
-    } else if (linkFunction(rndisFuncname().c_str(), i++)) {
+    if (vendorExtraProp != "none")
+      rndisComp += "," + vendorExtraProp;
+
+    if (functions & GadgetFunction::ADB)
+      rndisComp += ",adb";
+
+    if (addFunctionsFromPropString(rndisComp, i, false))
       return Status::ERROR;
-    }
+
+    lookupAndSetVidPid(rndisComp);
   } else if (addGenericAndroidFunctions(&mMonitorFfs, functions, &ffsEnabled, &i)
               != Status::SUCCESS) {
     return Status::ERROR;
@@ -426,6 +425,7 @@ V1_0::Status UsbGadget::setupFunctions(
       i = 0;
     }
 
+    mtype = getModemType();
     switch (mtype) {
     case EXTERNAL:
     case INTERNAL_EXTERNAL:
