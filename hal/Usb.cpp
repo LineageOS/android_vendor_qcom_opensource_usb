@@ -56,6 +56,7 @@ const char GOOGLE_USBC_35_ADAPTER_UNPLUGGED_ID_STR[] = "5029";
 volatile bool destroyThread;
 
 static void checkUsbWakeupSupport(struct Usb *usb);
+static void checkUsbInHostMode(struct Usb *usb);
 static void checkUsbDeviceAutoSuspend(const std::string& devicePath);
 static bool checkUsbInterfaceAutoSuspend(const std::string& devicePath,
         const std::string &intf);
@@ -890,6 +891,7 @@ Return<void> Usb::setCallback(const sp<V1_0::IUsbCallback> &callback) {
   pthread_mutex_unlock(&mLock);
 
   checkUsbWakeupSupport(this);
+  checkUsbInHostMode(this);
 
   /*
    * Check for the correct path to detect contaminant presence status
@@ -909,6 +911,23 @@ Return<void> Usb::setCallback(const sp<V1_0::IUsbCallback> &callback) {
   ALOGI("Contamination presence path: %s", mContaminantStatusPath.c_str());
 
   return Void();
+}
+
+static void checkUsbInHostMode(struct Usb *usb) {
+  std::string gadgetName = "/sys/bus/platform/devices/" + GetProperty(USB_CONTROLLER_PROP, "");
+  DIR *gd = opendir(gadgetName.c_str());
+  if (gd != NULL) {
+    struct dirent *gadgetDir;
+    while ((gadgetDir = readdir(gd))) {
+      if (strstr(gadgetDir->d_name, "xhci-hcd")) {
+	SetProperty(VENDOR_USB_ADB_DISABLED_PROP, "1");
+	closedir(gd);
+	return;
+      }
+    }
+    closedir(gd);
+  }
+  SetProperty(VENDOR_USB_ADB_DISABLED_PROP, "0");
 }
 
 static void checkUsbWakeupSupport(struct Usb *usb) {
