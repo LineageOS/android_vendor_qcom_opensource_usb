@@ -32,8 +32,6 @@
 #include <UsbGadgetCommon.h>
 #include "UsbGadget.h"
 
-#define ESOC_DEVICE_PATH "/sys/bus/esoc/devices"
-#define SOC_MACHINE_PATH "/sys/devices/soc0/machine"
 #define USB_CONTROLLER_PROP "vendor.usb.controller"
 #define DIAG_FUNC_NAME_PROP "vendor.usb.diag.func.name"
 #define RNDIS_FUNC_NAME_PROP "vendor.usb.rndis.func.name"
@@ -44,13 +42,6 @@
 #define PERSIST_VENDOR_USB_PROP "persist.vendor.usb.config"
 #define PERSIST_VENDOR_USB_EXTRA_PROP "persist.vendor.usb.config.extra"
 #define QDSS_INST_NAME_PROP "vendor.usb.qdss.inst.name"
-
-enum mdmType {
-  INTERNAL,
-  EXTERNAL,
-  INTERNAL_EXTERNAL,
-  NONE,
-};
 
 namespace android {
 namespace hardware {
@@ -330,52 +321,11 @@ static V1_0::Status validateAndSetVidPid(uint64_t functions) {
   return ret;
 }
 
-static enum mdmType getModemType() {
-  struct dirent* entry;
-  enum mdmType mtype = INTERNAL;
-  size_t pos_sda, pos_p, length;
-  std::unique_ptr<DIR, int(*)(DIR*)> dir(opendir(ESOC_DEVICE_PATH), closedir);
-  std::string esoc_name, path, soc_machine, esoc_dev_path = ESOC_DEVICE_PATH;
-
- /* On some platforms, /sys/bus/esoc/ director may not exists.*/
-  if (dir == NULL)
-      return mtype;
-
-  while ((entry = readdir(dir.get())) != NULL) {
-    if (entry->d_name[0] == '.')
-      continue;
-    path = esoc_dev_path + "/" + entry->d_name + "/esoc_name";
-    if (ReadFileToString(path, &esoc_name)) {
-      if (esoc_name.find("MDM") != std::string::npos ||
-        esoc_name.find("SDX") != std::string::npos) {
-        mtype = EXTERNAL;
-        break;
-      }
-    }
-  }
-  if (ReadFileToString(SOC_MACHINE_PATH, &soc_machine)) {
-    pos_sda = soc_machine.find("SDA");
-    pos_p = soc_machine.find_last_of('P');
-    length = soc_machine.length();
-    if (pos_sda != std::string::npos || pos_p == length - 1) {
-      mtype = mtype ? mtype : NONE;
-      goto done;
-    }
-    if (mtype)
-      mtype = INTERNAL_EXTERNAL;
-  }
-done:
-  ALOGI("getModemType %d", mtype);
-  return mtype;
-}
-
 V1_0::Status UsbGadget::setupFunctions(
     uint64_t functions, const sp<V1_0::IUsbGadgetCallback> &callback,
     uint64_t timeout) {
   bool ffsEnabled = false;
   int i = 0;
-  const char *comp;
-  enum mdmType mtype;
   std::string gadgetName = GetProperty(USB_CONTROLLER_PROP, "");
   std::string vendorProp = GetProperty(VENDOR_USB_PROP, GetProperty(PERSIST_VENDOR_USB_PROP, ""));
   std::string vendorExtraProp = GetProperty(PERSIST_VENDOR_USB_EXTRA_PROP, "none");
@@ -404,49 +354,27 @@ V1_0::Status UsbGadget::setupFunctions(
     return Status::ERROR;
   }
 
-  // override adb-only with additional QTI functions
-  if (i == 0 && functions & GadgetFunction::ADB) {
-    // If persist.vendor.usb.config or vendor.usb.config is set, look it up, parse it,
-    // and link each function into the composition
-    if (!vendorProp.empty()) {
-      // tack on ADB to the property if not there, since we only arrive here
-      // if "USB debugging enabled" is chosen which implies ADB
-      if (vendorProp.find("adb") == std::string::npos)
-        vendorProp += ",adb";
+  // override adb-only with additional QTI functions if vendor.usb.config
+  // or persist.vendor.usb.config is set
+  if (i == 0 && functions & GadgetFunction::ADB && !vendorProp.empty() &&
+                  vendorProp != "adb") {
+    // tack on ADB to the property string if not there, since we only arrive
+    // here if "USB debugging enabled" is chosen which implies ADB
+    if (vendorProp.find("adb") == std::string::npos)
+      vendorProp += ",adb";
 
-      ALOGI("setting composition from %s: %s", VENDOR_USB_PROP,
-              vendorProp.c_str());
-      if (!addFunctionsFromPropString(vendorProp, i, false))
-        if (!lookupAndSetVidPid(vendorProp))
-          goto enable_adb;
+    ALOGI("setting composition from %s: %s", VENDOR_USB_PROP,
+            vendorProp.c_str());
 
-      // if failed, then use below default compositions
+    // look up & parse prop string and link each function into the composition
+    if (addFunctionsFromPropString(vendorProp, i, false) ||
+        lookupAndSetVidPid(vendorProp)) {
+      // if failed just fall back to adb-only
       unlinkFunctions(CONFIG_PATH);
       i = 0;
     }
-
-    mtype = getModemType();
-    switch (mtype) {
-    case EXTERNAL:
-    case INTERNAL_EXTERNAL:
-      comp = "diag,diag_mdm,qdss,qdss_mdm,serial_cdev,dpl,rmnet,adb";
-      break;
-    case INTERNAL:
-      comp = "diag,serial_cdev,rmnet,dpl,qdss,adb";
-      break;
-    default:
-      comp = "diag,adb";
-      break;
-    }
-
-    ALOGI("enable QC default composition: %s", comp);
-    if (addFunctionsFromPropString(comp, i, false))
-      return Status::ERROR;
-    if (lookupAndSetVidPid(comp))
-      return Status::ERROR;
   }
 
-enable_adb:
   // finally add ADB at the end if enabled
   if ((functions & GadgetFunction::ADB) != 0) {
     ffsEnabled = true;
