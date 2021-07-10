@@ -95,7 +95,7 @@ if [ "$(getprop persist.vendor.usb.config)" == "" -a "$(getprop ro.build.type)" 
 				      setprop persist.vendor.usb.config diag,serial_smd,rmnet_ipa,adb
 			      fi
 		      ;;
-	              "msm8998" | "sdm660" | "apq8098_latv")
+	              "msm8998" | "sdm660" | "apq8098_latv" | "monaco")
 		          setprop persist.vendor.usb.config diag,serial_cdev,rmnet,adb
 		      ;;
 	              "sdm845" | "sdm710")
