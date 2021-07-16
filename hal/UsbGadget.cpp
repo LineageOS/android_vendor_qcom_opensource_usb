@@ -23,6 +23,7 @@
 #include <android-base/properties.h>
 #include <functional>
 #include <map>
+#include <tuple>
 #include <dirent.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -109,83 +110,85 @@ V1_0::Status UsbGadget::tearDownGadget() {
   return Status::SUCCESS;
 }
 
-static std::map<std::string, std::pair<const char *, const char *> >
+static std::map<std::string, std::tuple<const char *, const char *, const char *> >
 supported_compositions {
-  { "mass_storage", { "0x05C6", "0xF000" } },
-  { "mass_storage,adb", { "0x05C6", "0x9015" } },
-  { "diag,adb", { "0x05C6", "0x901D" } },
-  { "diag", { "0x05C6", "0x900E" } },
-  { "diag,serial_cdev,rmnet,adb", { "0x05C6", "0x9091" } },
-  { "diag,serial_cdev,rmnet", { "0x05C6", "0x9092" } },
-  { "rndis", { "0x05C6", "0xF00E" } },
-  { "rndis,adb", { "0x05C6", "0x9024" } },
-  { "rndis,diag", { "0x05C6", "0x902C" } },
-  { "rndis,diag,adb", { "0x05C6", "0x902D" } },
-  { "rndis,serial_cdev", { "0x05C6", "0x90B3" } },
-  { "rndis,serial_cdev,adb", { "0x05C6", "0x90B4" } },
-  { "rndis,serial_cdev,diag,", { "0x05C6", "0x90B5" } },
-  { "rndis,serial_cdev,diag,adb", { "0x05C6", "0x90B6" } },
-  { "mtp,diag", { "0x05C6", "0x901B" } },
-  { "mtp,diag,adb", { "0x05C6", "0x903A" } },
-  { "diag,qdss", { "0x05C6", "0x904A" } },
-  { "diag,qdss,adb", { "0x05C6", "0x9060" } },
-  { "rndis,diag,qdss", { "0x05C6", "0x9081" } },
-  { "rndis,diag,qdss,adb", { "0x05C6", "0x9082" } },
-  { "diag,qdss,rmnet", { "0x05C6", "0x9083" } },
-  { "diag,qdss,rmnet,adb", { "0x05C6", "0x9084" } },
-  { "ncm", { "0x05C6", "0xA4A1" } },
-  { "ncm,adb", { "0x05C6", "0x908C" } },
-  { "diag,serial_cdev", { "0x05C6", "0x9004" } },
-  { "diag,serial_cdev,rmnet,dpl", { "0x05C6", "0x90B7" } },
-  { "diag,serial_cdev,rmnet,dpl,adb", { "0x05C6", "0x90B8" } },
-  { "rndis,diag,dpl", { "0x05C6", "0x90BF" } },
-  { "rndis,diag,dpl,adb", { "0x05C6", "0x90C0" } },
-  { "ccid", { "0x05C6", "0x90CE" } },
-  { "ccid,adb", { "0x05C6", "0x90CF" } },
-  { "ccid,diag", { "0x05C6", "0x90D0" } },
-  { "ccid,diag,adb", { "0x05C6", "0x90D1" } },
-  { "diag,serial_cdev,rmnet,ccid", { "0x05C6", "0x90D2" } },
-  { "diag,serial_cdev,rmnet,ccid,adb", { "0x05C6", "0x90D3" } },
+  { "mass_storage", { "0x05C6", "0xF000", {} } },
+  { "mass_storage,adb", { "0x05C6", "0x9015", "adb,mass_storage" } },
+  { "diag,adb", { "0x05C6", "0x901D", {} } },
+  { "diag,adb,serial_cdev", { "0x05C6", "0x901F", {} } },
+  { "diag", { "0x05C6", "0x900E", {} } },
+  { "diag,serial_cdev,rmnet,adb", { "0x05C6", "0x9091", {} } },
+  { "diag,serial_cdev,rmnet", { "0x05C6", "0x9092", {} } },
+  { "rndis", { "0x05C6", "0xF00E", {} } },
+  { "rndis,adb", { "0x05C6", "0x9024", {} } },
+  { "rndis,diag", { "0x05C6", "0x902C", {} } },
+  { "rndis,diag,adb", { "0x05C6", "0x902D", {} } },
+  { "rndis,serial_cdev", { "0x05C6", "0x90B3", {} } },
+  { "rndis,serial_cdev,adb", { "0x05C6", "0x90B4", {} } },
+  { "rndis,serial_cdev,diag,", { "0x05C6", "0x90B5", {} } },
+  { "rndis,serial_cdev,diag,adb", { "0x05C6", "0x90B6", {} } },
+  { "mtp,diag", { "0x05C6", "0x901B", {} } },
+  { "mtp,diag,adb", { "0x05C6", "0x903A", {} } },
+  { "diag,qdss", { "0x05C6", "0x904A", {} } },
+  { "diag,qdss,adb", { "0x05C6", "0x9060", {} } },
+  { "rndis,diag,qdss", { "0x05C6", "0x9081", {} } },
+  { "rndis,diag,qdss,adb", { "0x05C6", "0x9082", {} } },
+  { "diag,qdss,rmnet", { "0x05C6", "0x9083", {} } },
+  { "diag,qdss,rmnet,adb", { "0x05C6", "0x9084", "diag,qdss,adb,rmnet" } },
+  { "ncm", { "0x05C6", "0xA4A1", {} } },
+  { "ncm,adb", { "0x05C6", "0x908C", {} } },
+  { "diag,serial_cdev", { "0x05C6", "0x9004", {} } },
+  { "diag,serial_cdev,rmnet,dpl", { "0x05C6", "0x90B7", {} } },
+  { "diag,serial_cdev,rmnet,dpl,adb", { "0x05C6", "0x90B8", {} } },
+  { "rndis,diag,dpl", { "0x05C6", "0x90BF", {} } },
+  { "rndis,diag,dpl,adb", { "0x05C6", "0x90C0", {} } },
+  { "ccid", { "0x05C6", "0x90CE", {} } },
+  { "ccid,adb", { "0x05C6", "0x90CF", {} } },
+  { "ccid,diag", { "0x05C6", "0x90D0", {} } },
+  { "ccid,diag,adb", { "0x05C6", "0x90D1", {} } },
+  { "diag,serial_cdev,rmnet,ccid", { "0x05C6", "0x90D2", {} } },
+  { "diag,serial_cdev,rmnet,ccid,adb", { "0x05C6", "0x90D3", {} } },
   { "diag,diag_mdm,qdss,qdss_mdm,serial_cdev,serial_cdev_mdm,rmnet",
-      { "0x05C6", "0x90D7" } },
+      { "0x05C6", "0x90D7", {} } },
   { "diag,diag_mdm,qdss,qdss_mdm,serial_cdev,serial_cdev_mdm,rmnet,adb",
-      { "0x05C6", "0x90D8" } },
+      { "0x05C6", "0x90D8", {} } },
   { "diag,diag_mdm,qdss,qdss_mdm,serial_cdev,serial_cdev_mdm,dpl,rmnet",
-      { "0x05C6", "0x90DD" } },
+      { "0x05C6", "0x90DD", {} } },
   { "diag,diag_mdm,qdss,qdss_mdm,serial_cdev,serial_cdev_mdm,dpl,rmnet,adb",
-      { "0x05C6", "0x90DE" } },
-  { "diag,serial_cdev,rmnet,dpl,qdss", { "0x05C6", "0x90DC" } },
-  { "diag,serial_cdev,rmnet,dpl,qdss,adb", { "0x05C6", "0x90DB" } },
-  { "diag,uac2,adb", { "0x05C6", "0x90CA" } },
-  { "diag,uac2", { "0x05C6", "0x901C" } },
-  { "diag,uvc,adb", { "0x05C6", "0x90CB" } },
-  { "diag,uvc", { "0x05C6", "0x90DF" } },
-  { "diag,uac2,uvc,adb", { "0x05C6", "0x90CC" } },
-  { "diag,uac2,uvc", { "0x05C6", "0x90E0" } },
+      { "0x05C6", "0x90DE", {} } },
+  { "diag,serial_cdev,rmnet,dpl,qdss", { "0x05C6", "0x90DC", {} } },
+  { "diag,serial_cdev,rmnet,dpl,qdss,adb", { "0x05C6", "0x90DB", {} } },
+  { "diag,uac2,adb", { "0x05C6", "0x90CA", "diag,adb,uac2" } },
+  { "diag,uac2", { "0x05C6", "0x901C", {} } },
+  { "diag,uvc,adb", { "0x05C6", "0x90CB", "diag,adb,uvc" } },
+  { "diag,uvc", { "0x05C6", "0x90DF", {} } },
+  { "diag,uac2,uvc,adb", { "0x05C6", "0x90CC", "diag,adb,uac2,uvc" } },
+  { "diag,uac2,uvc", { "0x05C6", "0x90E0", {} } },
   { "diag,diag_mdm,qdss,qdss_mdm,serial_cdev,dpl,rmnet",
-      { "0x05C6", "0x90E4" } },
+      { "0x05C6", "0x90E4", {} } },
   { "diag,diag_mdm,qdss,qdss_mdm,serial_cdev,dpl,rmnet,adb",
-      { "0x05C6", "0x90E5" } },
+      { "0x05C6", "0x90E5", {} } },
   { "rndis,diag,diag_mdm,qdss,qdss_mdm,serial_cdev,dpl",
-      { "0x05C6", "0x90E6" } },
+      { "0x05C6", "0x90E6", {} } },
   { "rndis,diag,diag_mdm,qdss,qdss_mdm,serial_cdev,dpl,adb",
-      { "0x05C6", "0x90E7" } },
-  { "rndis,diag,qdss,serial_cdev,dpl", { "0x05C6", "0x90E8" } },
-  { "rndis,diag,qdss,serial_cdev,dpl,adb", { "0x05C6", "0x90E9" } },
-  { "diag,diag_mdm,adb", { "0x05C6", "0x90D9" } },
+      { "0x05C6", "0x90E7", {} } },
+  { "rndis,diag,qdss,serial_cdev,dpl", { "0x05C6", "0x90E8", {} } },
+  { "rndis,diag,qdss,serial_cdev,dpl,adb", { "0x05C6", "0x90E9", {} } },
+  { "diag,diag_mdm,adb", { "0x05C6", "0x90D9", {} } },
   { "diag,diag_mdm,diag_mdm2,qdss,qdss_mdm,serial_cdev,dpl,rmnet",
-      { "0x05C6", "0x90F6" } },
+      { "0x05C6", "0x90F6", {} } },
   { "diag,diag_mdm,diag_mdm2,qdss,qdss_mdm,serial_cdev,dpl,rmnet,adb",
-      { "0x05C6", "0x90F7" } },
+      { "0x05C6", "0x90F7", {} } },
   { "rndis,diag,diag_mdm,diag_mdm2,qdss,qdss_mdm,serial_cdev,dpl",
-      { "0x05C6", "0x90F8" } },
+      { "0x05C6", "0x90F8", {} } },
   { "rndis,diag,diag_mdm,diag_mdm2,qdss,qdss_mdm,serial_cdev,dpl,adb",
-      { "0x05C6", "0x90F9" } },
-  { "diag,diag_mdm,qdss_mdm,dpl,adb", { "0x05C6", "0x90FF" } },
-  { "diag,qdss,dpl,adb", { "0x05C6", "0x9104" } },
-  { "diag,dpl", { "0x05C6", "0x9105" } },
-  { "diag,diag_cnss,serial_cdev,rmnet,dpl,qdss,adb", { "0x05C6", "0x9110" } },
-  { "diag,diag_cnss,serial_cdev,rmnet,dpl,qdss", { "0x05C6", "0x9111" } },
+      { "0x05C6", "0x90F9", {} } },
+  { "diag,diag_mdm,adb,ccid", { "0x05C6", "0x9044", "diag,diag_mdm,adb,ccid" } },
+  { "diag,diag_mdm,qdss_mdm,dpl,adb", { "0x05C6", "0x90FF", {} } },
+  { "diag,qdss,dpl,adb", { "0x05C6", "0x9104", {} } },
+  { "diag,dpl", { "0x05C6", "0x9105", {} } },
+  { "diag,diag_cnss,serial_cdev,rmnet,dpl,qdss,adb", { "0x05C6", "0x9110", {} } },
+  { "diag,diag_cnss,serial_cdev,rmnet,dpl,qdss", { "0x05C6", "0x9111", {} } },
 };
 
 static std::string rndisFuncname() {
@@ -220,7 +223,19 @@ static std::map<std::string, std::function<std::string()> > supported_funcs {
   { "uvc",              [](){ return "uvc.0"; } },
 };
 
-static int addFunctionsFromPropString(std::string prop, int &i, bool adb) {
+int UsbGadget::addFunctionsFromPropString(std::string prop, bool &ffsEnabled, int &i) {
+  if (!supported_compositions.count(prop)) {
+    ALOGE("Composition \"%s\" unsupported", prop.c_str());
+    return -1;
+  }
+
+  auto [vid, pid, actual_order] = supported_compositions[prop];
+
+  // some compositions differ from the order given in the property string
+  // e.g. ADB may appear somewhere in the middle instead of being last
+  if (actual_order != nullptr)
+    prop = actual_order;
+
   // tokenize the prop string and add each function individually
   for (size_t start = 0; start != std::string::npos; ) {
     size_t end = prop.find_first_of(',', start);
@@ -233,33 +248,23 @@ static int addFunctionsFromPropString(std::string prop, int &i, bool adb) {
       start = end + 1;
     }
 
-    if (!adb && funcname == "adb")
-      continue;
-
     if (!supported_funcs.count(funcname)) {
       ALOGE("Function \"%s\" unsupported", funcname.c_str());
       return -1;
     }
 
     ALOGI("Adding %s", funcname.c_str());
-    if (linkFunction(supported_funcs[funcname]().c_str(), i++))
+    if (funcname == "adb") {
+      if (addAdb(&mMonitorFfs, &i) != Status::SUCCESS)
+        return -1;
+      ffsEnabled = true;
+    } else if (linkFunction(supported_funcs[funcname]().c_str(), i))
       return -1;
+
+    ++i;
   }
 
-  return 0;
-}
-
-static int lookupAndSetVidPid(std::string prop) {
-  if (!supported_compositions.count(prop)) {
-    ALOGE("Composition \"%s\" unsupported", prop.c_str());
-    return -1;
-  }
-
-  auto comp = supported_compositions[prop];
-  std::string vid = comp.first;
-  std::string pid = comp.second;
-
-  if (setVidPid(vid.c_str(), pid.c_str()) != Status::SUCCESS)
+  if (setVidPid(vid, pid) != Status::SUCCESS)
     return -1;
 
   return 0;
@@ -345,19 +350,13 @@ V1_0::Status UsbGadget::setupFunctions(
     if (functions & GadgetFunction::ADB)
       rndisComp += ",adb";
 
-    if (addFunctionsFromPropString(rndisComp, i, false))
+    if (addFunctionsFromPropString(rndisComp, ffsEnabled, i))
       return Status::ERROR;
+  } else if (functions == static_cast<uint64_t>(GadgetFunction::ADB) &&
+      !vendorProp.empty() && vendorProp != "adb") {
+    // override adb-only with additional QTI functions if vendor.usb.config
+    // or persist.vendor.usb.config is set
 
-    lookupAndSetVidPid(rndisComp);
-  } else if (addGenericAndroidFunctions(&mMonitorFfs, functions, &ffsEnabled, &i)
-              != Status::SUCCESS) {
-    return Status::ERROR;
-  }
-
-  // override adb-only with additional QTI functions if vendor.usb.config
-  // or persist.vendor.usb.config is set
-  if (i == 0 && functions & GadgetFunction::ADB && !vendorProp.empty() &&
-                  vendorProp != "adb") {
     // tack on ADB to the property string if not there, since we only arrive
     // here if "USB debugging enabled" is chosen which implies ADB
     if (vendorProp.find("adb") == std::string::npos)
@@ -367,18 +366,22 @@ V1_0::Status UsbGadget::setupFunctions(
             vendorProp.c_str());
 
     // look up & parse prop string and link each function into the composition
-    if (addFunctionsFromPropString(vendorProp, i, false) ||
-        lookupAndSetVidPid(vendorProp)) {
+    if (addFunctionsFromPropString(vendorProp, ffsEnabled, i)) {
       // if failed just fall back to adb-only
       unlinkFunctions(CONFIG_PATH);
       i = 0;
+      ffsEnabled = true;
+      if (addAdb(&mMonitorFfs, &i) != Status::SUCCESS) return Status::ERROR;
     }
-  }
+  } else { // standard Android supported functions
+    if (addGenericAndroidFunctions(&mMonitorFfs, functions, &ffsEnabled, &i)
+              != Status::SUCCESS)
+      return Status::ERROR;
 
-  // finally add ADB at the end if enabled
-  if ((functions & GadgetFunction::ADB) != 0) {
-    ffsEnabled = true;
-    if (addAdb(&mMonitorFfs, &i) != Status::SUCCESS) return Status::ERROR;
+    if ((functions & GadgetFunction::ADB) != 0) {
+      ffsEnabled = true;
+      if (addAdb(&mMonitorFfs, &i) != Status::SUCCESS) return Status::ERROR;
+    }
   }
 
   if (functions & (GadgetFunction::ADB | GadgetFunction::MTP | GadgetFunction::PTP)) {

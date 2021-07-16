@@ -37,11 +37,6 @@ using ::android::hardware::usb::gadget::MonitorFfs;
 struct UsbGadget : public IUsbGadget {
   UsbGadget(const char* const gadget);
 
-  // Makes sure that only one request is processed at a time.
-  std::mutex mLockSetCurrentFunction;
-  uint64_t mCurrentUsbFunctions;
-  bool mCurrentUsbFunctionsApplied;
-
   Return<void> setCurrentUsbFunctions(uint64_t functions,
                                       const sp<V1_0::IUsbGadgetCallback>& callback,
                                       uint64_t timeout) override;
@@ -51,12 +46,20 @@ struct UsbGadget : public IUsbGadget {
 
   Return<Status> reset() override;
 
-  private:
+private:
   V1_0::Status tearDownGadget();
   V1_0::Status setupFunctions(uint64_t functions,
                               const sp<V1_0::IUsbGadgetCallback>& callback,
                               uint64_t timeout);
+  int addFunctionsFromPropString(std::string prop, bool &ffsEnabled, int &i);
+
   MonitorFfs mMonitorFfs;
+
+  // Makes sure that only one request is processed at a time.
+  std::mutex mLockSetCurrentFunction;
+
+  uint64_t mCurrentUsbFunctions;
+  bool mCurrentUsbFunctionsApplied;
 };
 
 }  // namespace implementation
