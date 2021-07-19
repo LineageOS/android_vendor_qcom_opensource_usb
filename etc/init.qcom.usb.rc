@@ -39,7 +39,6 @@ on charger
     write /config/usb_gadget/g1/configs/b.1/MaxPower 900
     exec u:r:vendor_qti_init_shell:s0 -- /vendor/bin/init.qcom.usb.sh
     write /config/usb_gadget/g1/strings/0x409/product ${vendor.usb.product_string}
-    wait /sys/class/udc/${sys.usb.controller}
     setprop sys.usb.config mass_storage
     setprop sys.usb.configfs 1
 
@@ -313,7 +312,7 @@ on property:sys.usb.ffs.ready=1 && property:sys.usb.config=diag,serial_cdev,seri
 on property:vendor.usb.tethering=true
     write /sys/class/net/rndis0/queues/rx-0/rps_cpus ${vendor.usb.rps_mask}
 
-on property:sys.usb.config=rndis
+on property:sys.usb.config=rndis && property:vendor.usb.rndis.func.name=*
     setprop sys.usb.config rndis,${persist.vendor.usb.config.extra}
 
 on property:sys.usb.config=rndis,none && property:sys.usb.configfs=1
@@ -342,7 +341,7 @@ on property:sys.usb.config=rndis,sec && property:sys.usb.configfs=1
     write /config/usb_gadget/g2/UDC ${persist.vendor.usb.controller.secondary}
     setprop sys.usb.state rndis
 
-on property:sys.usb.config=rndis,adb
+on property:sys.usb.config=rndis,adb && property:vendor.usb.rndis.func.name=*
     setprop sys.usb.config rndis,${persist.vendor.usb.config.extra},adb
 
 on property:sys.usb.config=rndis,none,adb && property:sys.usb.configfs=1
@@ -1752,6 +1751,15 @@ on property:sys.usb.config=midi && property:sys.usb.configfs=1
 on property:sys.usb.config=midi,adb && property:sys.usb.configfs=1
     write /config/usb_gadget/g1/idVendor 0x18d1
     write /config/usb_gadget/g1/idProduct 0x4ee9
+    symlink /config/usb_gadget/g1/configs/b.1 /config/usb_gadget/g1/os_desc/b.1
+
+on property:sys.usb.config=rndis && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/idVendor 0x05C6
+    write /config/usb_gadget/g1/idProduct 0xF00E
+
+on property:sys.usb.config=rndis,adb && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/idVendor 0x05C6
+    write /config/usb_gadget/g1/idProduct 0x9024
     symlink /config/usb_gadget/g1/configs/b.1 /config/usb_gadget/g1/os_desc/b.1
 
 on property:vendor.usb.eud=1
