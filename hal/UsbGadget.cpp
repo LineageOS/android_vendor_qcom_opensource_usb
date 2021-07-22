@@ -129,12 +129,12 @@ supported_compositions {
   { "rndis,serial_cdev,diag,adb", { "0x05C6", "0x90B6", {} } },
   { "mtp,diag", { "0x05C6", "0x901B", {} } },
   { "mtp,diag,adb", { "0x05C6", "0x903A", {} } },
-  { "diag,qdss", { "0x05C6", "0x904A", {} } },
-  { "diag,qdss,adb", { "0x05C6", "0x9060", {} } },
-  { "rndis,diag,qdss", { "0x05C6", "0x9081", {} } },
-  { "rndis,diag,qdss,adb", { "0x05C6", "0x9082", {} } },
-  { "diag,qdss,rmnet", { "0x05C6", "0x9083", {} } },
-  { "diag,qdss,rmnet,adb", { "0x05C6", "0x9084", "diag,qdss,adb,rmnet" } },
+  { "diag,qdss", { "0x05C6", "0x904A", "diag,qdss_debug" } },
+  { "diag,qdss,adb", { "0x05C6", "0x9060", "diag,qdss_debug,adb" } },
+  { "rndis,diag,qdss", { "0x05C6", "0x9081", "rndis,diag,qdss_debug" } },
+  { "rndis,diag,qdss,adb", { "0x05C6", "0x9082", "rndis,diag,qdss_debug,adb" } },
+  { "diag,qdss,rmnet", { "0x05C6", "0x9083", "diag,qdss_debug,rmnet" } },
+  { "diag,qdss,rmnet,adb", { "0x05C6", "0x9084", "diag,qdss_debug,adb,rmnet" } },
   { "ncm", { "0x05C6", "0xA4A1", {} } },
   { "ncm,adb", { "0x05C6", "0x908C", {} } },
   { "diag,serial_cdev", { "0x05C6", "0x9004", {} } },
@@ -201,6 +201,15 @@ static std::string rndisFuncname() {
   return rndisFunc + ".rndis";
 }
 
+static std::string qdssFuncname(const char *debug) {
+  auto qdss = "qdss." + GetProperty(QDSS_INST_NAME_PROP, "qdss");
+  auto debug_iface = FUNCTIONS_PATH + qdss + "/enable_debug_inface";
+
+  WriteStringToFile(debug, debug_iface.c_str());
+
+  return qdss;
+}
+
 static std::map<std::string, std::function<std::string()> > supported_funcs {
   { "adb",              [](){ return "ffs.adb"; } },
   { "ccid",             [](){ return "ccid.ccid"; } },
@@ -213,7 +222,8 @@ static std::map<std::string, std::function<std::string()> > supported_funcs {
   { "mtp",              [](){ return "ffs.mtp"; } },
   { "ncm",              [](){ return "ncm.0"; } },
   { "ptp",              [](){ return "ffs.ptp"; } },
-  { "qdss",             [](){ return "qdss." + GetProperty(QDSS_INST_NAME_PROP, "qdss"); } },
+  { "qdss",             [](){ return qdssFuncname("0"); } },
+  { "qdss_debug",       [](){ return qdssFuncname("1"); } },
   { "qdss_mdm",         [](){ return "qdss.qdss_mdm"; } },
   { "rmnet",            [](){ return GetProperty(RMNET_FUNC_NAME_PROP, "gsi") + "." + GetProperty(RMNET_INST_NAME_PROP, "rmnet"); } },
   { "rndis",            rndisFuncname },
