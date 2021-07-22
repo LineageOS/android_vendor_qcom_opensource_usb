@@ -271,6 +271,10 @@ int UsbGadget::addFunctionsFromPropString(std::string prop, bool &ffsEnabled, in
     } else if (linkFunction(supported_funcs[funcname]().c_str(), i))
       return -1;
 
+    // Set Diag PID for QC DLOAD mode
+    if (i == 0 && !strcasecmp(vid, "0x05c6") && funcname == "diag")
+      WriteStringToFile(pid, FUNCTIONS_PATH "diag.diag/pid");
+
     ++i;
   }
 
