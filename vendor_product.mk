@@ -4,6 +4,7 @@ PRODUCT_PACKAGES += init.qcom.usb.rc init.qcom.usb.sh
 # additional debugging on userdebug/eng builds
 ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
   PRODUCT_PACKAGES += init.qti.usb.debug.sh
+  PRODUCT_PACKAGES += init.qti.usb.debug.rc
 endif
 
 ifneq ($(TARGET_KERNEL_VERSION),$(filter $(TARGET_KERNEL_VERSION),4.9 4.14))
