@@ -43,6 +43,7 @@ if [ -d $tracefs ]; then
     echo 1 > $tracefs/instances/usb/events/dwc3/dwc3_gadget_ep_enable/enable
     echo 1 > $tracefs/instances/usb/events/dwc3/dwc3_gadget_giveback/enable
     echo 1 > $tracefs/instances/usb/events/dwc3/dwc3_prepare_trb/enable
+    echo 1 > $tracefs/instances/usb/events/dwc3/dwc3_event/enable
 
     # ucsi
     echo 1 > $tracefs/instances/usb/events/ucsi/ucsi_connector_change/enable
