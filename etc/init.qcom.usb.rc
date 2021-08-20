@@ -42,7 +42,7 @@ on charger
     setprop sys.usb.config mass_storage
     setprop sys.usb.configfs 1
 
-on boot
+on post-fs
     mount configfs none /config
     mkdir /config/usb_gadget/g1 0770
     mkdir /config/usb_gadget/g2 0770
@@ -108,15 +108,17 @@ on boot
     exec u:r:vendor_qti_init_shell:s0 -- /vendor/bin/init.qcom.usb.sh
     write /config/usb_gadget/g1/strings/0x409/product ${vendor.usb.product_string}
     write /config/usb_gadget/g2/strings/0x409/product ${vendor.usb.product_string}
-    setprop sys.usb.config ${persist.vendor.usb.config}
 
-on boot && property:vendor.usb.use_ffs_mtp=1
+on post-fs && property:vendor.usb.use_ffs_mtp=1
    mkdir /config/usb_gadget/g1/functions/ffs.mtp
    mkdir /config/usb_gadget/g1/functions/ffs.ptp
    mkdir /dev/usb-ffs/mtp 0770 mtp mtp
    mount functionfs mtp /dev/usb-ffs/mtp rmode=0770,fmode=0660,uid=1024,gid=1024,no_disconnect=1
    mkdir /dev/usb-ffs/ptp 0770 mtp mtp
    mount functionfs ptp /dev/usb-ffs/ptp rmode=0770,fmode=0660,uid=1024,gid=1024,no_disconnect=1
+
+on boot
+    setprop sys.usb.config ${persist.vendor.usb.config}
 
 on boot && property:vendor.usb.use_gadget_hal=1
    setprop sys.usb.configfs 2
