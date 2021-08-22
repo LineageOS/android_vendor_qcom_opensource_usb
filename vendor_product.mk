@@ -1,3 +1,5 @@
+PRODUCT_SOONG_NAMESPACES += vendor/qcom/opensource/usb/etc
+
 # USB init scripts
 PRODUCT_PACKAGES += init.qcom.usb.rc init.qcom.usb.sh
 
