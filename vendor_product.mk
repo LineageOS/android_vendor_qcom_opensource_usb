@@ -1,3 +1,5 @@
+PRODUCT_SOONG_NAMESPACES += vendor/qcom/opensource/usb/etc
+
 #
 # Default property overrides for various function configurations
 # These can be further overridden at runtime in init*.rc files as needed
