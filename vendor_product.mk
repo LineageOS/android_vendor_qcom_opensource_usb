@@ -29,7 +29,7 @@ PRODUCT_PROPERTY_OVERRIDES += vendor.usb.dpl.inst.name=dpl
 
 # QDSS uses SW path on these targets
 ifneq ($(filter lahaina taro,$(TARGET_BOARD_PLATFORM)),)
-  PRODUCT_PROPERTY_OVERRIDES += vendor.usb.qdss.inst.name=qdss_mdm
+  PRODUCT_PROPERTY_OVERRIDES += vendor.usb.qdss.inst.name=qdss_sw
 else
   PRODUCT_PROPERTY_OVERRIDES += vendor.usb.qdss.inst.name=qdss
 endif
