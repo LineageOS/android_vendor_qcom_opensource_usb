@@ -27,8 +27,10 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
+prop_enabled=`getprop persist.vendor.usb.enable_ftrace 0`
+
 # bail out if its perf config
-if [ ! -d /sys/module/msm_rtb ]; then
+if [ "$prop_enabled" == "0" -a ! -d /sys/module/msm_rtb ]; then
     return
 fi
 
