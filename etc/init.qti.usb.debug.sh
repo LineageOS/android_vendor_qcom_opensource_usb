@@ -27,7 +27,12 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-# Enable various ftrace debugging events
+# bail out if its perf config
+if [ ! -d /sys/module/msm_rtb ]; then
+    return
+fi
+
+# Enable various ftrace debugging events for USB
 tracefs=/sys/kernel/tracing
 
 if [ -d $tracefs ]; then
