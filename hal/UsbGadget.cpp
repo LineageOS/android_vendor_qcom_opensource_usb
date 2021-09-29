@@ -43,6 +43,7 @@
 #define PERSIST_VENDOR_USB_PROP "persist.vendor.usb.config"
 #define PERSIST_VENDOR_USB_EXTRA_PROP "persist.vendor.usb.config.extra"
 #define QDSS_INST_NAME_PROP "vendor.usb.qdss.inst.name"
+#define CONFIG_STRING CONFIG_PATH "strings/0x409/configuration"
 
 namespace android {
 namespace hardware {
@@ -246,6 +247,8 @@ int UsbGadget::addFunctionsFromPropString(std::string prop, bool &ffsEnabled, in
   if (actual_order != nullptr)
     prop = actual_order;
 
+  WriteStringToFile(prop, CONFIG_STRING);
+
   // tokenize the prop string and add each function individually
   for (size_t start = 0; start != std::string::npos; ) {
     size_t end = prop.find_first_of(',', start);
@@ -388,6 +391,8 @@ V1_0::Status UsbGadget::setupFunctions(
       if (addAdb(&mMonitorFfs, &i) != Status::SUCCESS) return Status::ERROR;
     }
   } else { // standard Android supported functions
+    WriteStringToFile("android", CONFIG_STRING);
+
     if (addGenericAndroidFunctions(&mMonitorFfs, functions, &ffsEnabled, &i)
               != Status::SUCCESS)
       return Status::ERROR;
