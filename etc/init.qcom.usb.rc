@@ -40,6 +40,8 @@ on charger
     exec u:r:vendor_qti_init_shell:s0 -- /vendor/bin/init.qcom.usb.sh
     write /config/usb_gadget/g1/strings/0x409/product ${vendor.usb.product_string}
     setprop sys.usb.config mass_storage
+    setprop sys.usb.controller ${vendor.usb.controller}
+    wait /sys/class/udc/${sys.usb.controller}
     setprop sys.usb.configfs 1
 
 on post-fs
