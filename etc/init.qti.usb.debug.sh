@@ -113,5 +113,10 @@ if [ -d $tracefs ]; then
     # usb instance kprobe events
     echo 1 > events/usb_gadget/enable
 
+    #DWC3 core runtime
+    echo 'name~"a600000.*"' > events/rpm/filter
+    echo 1 > events/rpm/rpm_resume/enable
+    echo 1 > events/rpm/rpm_suspend/enable
+    echo 1 > events/rpm/rpm_return_int/enable
     echo 1 > tracing_on
 fi
