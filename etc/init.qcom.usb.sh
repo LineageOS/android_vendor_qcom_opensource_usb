@@ -100,7 +100,7 @@ if [ "$(getprop persist.vendor.usb.config)" == "" -a "$(getprop ro.build.type)" 
 	              "sdm845" | "sdm710")
 		          setprop persist.vendor.usb.config diag,serial_cdev,rmnet,dpl,adb
 		      ;;
-	              "msmnile" | "sm6150" | "trinket" | "lito" | "atoll" | "bengal" | "lahaina" | "holi" | "taro")
+	              "msmnile" | "sm6150" | "trinket" | "lito" | "atoll" | "bengal" | "lahaina" | "holi" | "taro" | "kalama")
 			  setprop persist.vendor.usb.config diag,serial_cdev,rmnet,dpl,qdss,adb
 		      ;;
 	              *)
@@ -138,11 +138,21 @@ esac
 
 # check configfs is mounted or not
 if [ -d /config/usb_gadget ]; then
-	# Chip-serial is used for unique MSM identification in Product string
-	msm_serial=`cat /sys/devices/soc0/serial_number`;
-	msm_serial_hex=`printf %08X $msm_serial`
 	machine_type=`cat /sys/devices/soc0/machine`
-	setprop vendor.usb.product_string "$machine_type-$soc_hwplatform _SN:$msm_serial_hex"
+
+	# Chip ID & serial are used for unique MSM identification in Product String
+	# If not present, then omit them instead of using 0x00000000
+	msm_chipid=`cat /sys/devices/soc0/nproduct_id`;
+	if [ "$msm_chipid" != "" ]; then
+		msm_chipid_hex=`printf _CID:%04X $msm_chipid`
+	fi
+
+	msm_serial=`cat /sys/devices/soc0/serial_number`;
+	if [ "$msm_serial" != "" ]; then
+		msm_serial_hex=`printf _SN:%08X $msm_serial`
+	fi
+
+	setprop vendor.usb.product_string "$machine_type-$soc_hwplatform$msm_chipid_hex$msm_serial_hex"
 
 	# ADB requires valid iSerialNumber; if ro.serialno is missing, use dummy
 	serialnumber=`cat /config/usb_gadget/g1/strings/0x409/serialnumber 2> /dev/null`
