@@ -163,21 +163,11 @@ esac
 
 # check configfs is mounted or not
 if [ -d /config/usb_gadget ]; then
-	machine_type=`cat /sys/devices/soc0/machine`
-
-	# Chip ID & serial are used for unique MSM identification in Product String
-	# If not present, then omit them instead of using 0x00000000
-	msm_chipid=`cat /sys/devices/soc0/nproduct_id`;
-	if [ "$msm_chipid" != "" ]; then
-		msm_chipid_hex=`printf _CID:%04X $msm_chipid`
+	usb_product=`getprop vendor.usb.product_string`;
+	vendor_model=`getprop ro.product.vendor.model`;
+	if [ "$usb_product" == "" ]; then
+		setprop vendor.usb.product_string "$vendor_model"
 	fi
-
-	msm_serial=`cat /sys/devices/soc0/serial_number`;
-	if [ "$msm_serial" != "" ]; then
-		msm_serial_hex=`printf _SN:%08X $msm_serial`
-	fi
-
-	setprop vendor.usb.product_string "$machine_type-$soc_hwplatform$msm_chipid_hex$msm_serial_hex"
 
 	# ADB requires valid iSerialNumber; if ro.serialno is missing, use dummy
 	serialnumber=`cat /config/usb_gadget/g1/strings/0x409/serialnumber 2> /dev/null`
