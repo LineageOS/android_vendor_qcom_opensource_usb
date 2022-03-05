@@ -20,6 +20,29 @@
     {
       "unresolved": true,
       "key": {
+        "uuid": "9f507d14_238a722c",
+        "filename": "hal/Usb.cpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 779,
+      "author": {
+        "id": 10258
+      },
+      "writtenOn": "2022-03-05T13:30:23Z",
+      "side": 1,
+      "message": "They adopt this more gereral approach to handle that path.",
+      "range": {
+        "startLine": 775,
+        "startChar": 0,
+        "endLine": 779,
+        "endChar": 0
+      },
+      "revId": "f2125ea496a5a6e9bd43891a5f24274e30745b57",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
         "uuid": "1997b2ef_4297ba97",
         "filename": "hal/Usb.h",
         "patchSetId": 2
@@ -55,6 +78,30 @@
       "side": 1,
       "message": "It\u0027s the same here from 4.9 to 5.4 qcom devices",
       "parentUuid": "1997b2ef_4297ba97",
+      "range": {
+        "startLine": 61,
+        "startChar": 0,
+        "endLine": 62,
+        "endChar": 59
+      },
+      "revId": "f2125ea496a5a6e9bd43891a5f24274e30745b57",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "8cfab4cb_7d85a488",
+        "filename": "hal/Usb.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 62,
+      "author": {
+        "id": 10258
+      },
+      "writtenOn": "2022-03-05T13:30:23Z",
+      "side": 1,
+      "message": "Isn\u0027t it just happen to be the same?",
+      "parentUuid": "b11fcec4_0d51010e",
       "range": {
         "startLine": 61,
         "startChar": 0,
