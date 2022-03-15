@@ -55,27 +55,27 @@ Return<bool> Usb::enableUsbDataSignal(bool enable) {
   ALOGI("Userspace turn %s USB data signaling", enable ? "on" : "off");
 
   if (enable) {
-    if (!WriteStringToFile("1", USB_DATA_PATH)) {
+    if (!WriteStringToFile("1", mDevicePath + USB_DATA_PATH)) {
       ALOGE("Not able to turn on usb connection notification");
       result = false;
     }
 
-    if (!WriteStringToFile(kGadgetName, PULLUP_PATH)) {
+    if (!WriteStringToFile(mGadgetName, PULLUP_PATH)) {
       ALOGE("Gadget cannot be pulled up");
       result = false;
     }
   } else {
-    if (!WriteStringToFile("1", ID_PATH)) {
+    if (!WriteStringToFile("1", mDevicePath + ID_PATH)) {
       ALOGE("Not able to turn off host mode");
       result = false;
     }
 
-    if (!WriteStringToFile("0", VBUS_PATH)) {
+    if (!WriteStringToFile("0", mDevicePath + VBUS_PATH)) {
       ALOGE("Not able to set Vbus state");
       result = false;
     }
 
-    if (!WriteStringToFile("0", USB_DATA_PATH)) {
+    if (!WriteStringToFile("0", mDevicePath + USB_DATA_PATH)) {
       ALOGE("Not able to turn off usb connection notification");
       result = false;
     }
@@ -260,12 +260,14 @@ wait_again:
   return roleSwitch;
 }
 
-Usb::Usb()
+Usb::Usb(std::string deviceName, std::string gadgetName)
         : mLock(PTHREAD_MUTEX_INITIALIZER),
           mRoleSwitchLock(PTHREAD_MUTEX_INITIALIZER),
           mPartnerLock(PTHREAD_MUTEX_INITIALIZER),
           mPartnerUp(false),
-          mContaminantPresence(false) {
+          mContaminantPresence(false),
+          mDevicePath(SOC_PATH + deviceName + "/"),
+          mGadgetName(gadgetName) {
     pthread_condattr_t attr;
     if (pthread_condattr_init(&attr)) {
         ALOGE("pthread_condattr_init failed: %s", strerror(errno));
@@ -1095,12 +1097,15 @@ static bool checkUsbInterfaceAutoSuspend(const std::string& devicePath,
 }  // namespace android
 
 int main() {
+  using android::base::GetProperty;
   using android::hardware::configureRpcThreadpool;
   using android::hardware::joinRpcThreadpool;
   using android::hardware::usb::V1_3::IUsb;
   using android::hardware::usb::V1_3::implementation::Usb;
 
-  android::sp<IUsb> service = new Usb();
+  android::sp<IUsb> service = new Usb(
+      GetProperty(USB_DEVICE_PROP, "a600000.ssusb"),
+      GetProperty(USB_CONTROLLER_PROP, "a600000.dwc3"));
 
   configureRpcThreadpool(1, true /*callerWillJoin*/);
   android::status_t status = service->registerAsService();
