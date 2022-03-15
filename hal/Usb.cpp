@@ -54,28 +54,32 @@ Return<bool> Usb::enableUsbDataSignal(bool enable) {
 
   ALOGI("Userspace turn %s USB data signaling", enable ? "on" : "off");
 
+  std::string gadgetName = GetProperty(USB_CONTROLLER_PROP, "a600000.dwc3");
+  std::string deviceName = GetProperty(USB_DEVICE_PROP, "a600000.ssusb");
+  std::string socPath = SOC_PATH + deviceName;
+
   if (enable) {
-    if (!WriteStringToFile("1", USB_DATA_PATH)) {
+    if (!WriteStringToFile("1", socPath + USB_DATA_PATH)) {
       ALOGE("Not able to turn on usb connection notification");
       result = false;
     }
 
-    if (!WriteStringToFile(kGadgetName, PULLUP_PATH)) {
+    if (!WriteStringToFile(gadgetName, PULLUP_PATH)) {
       ALOGE("Gadget cannot be pulled up");
       result = false;
     }
   } else {
-    if (!WriteStringToFile("1", ID_PATH)) {
+    if (!WriteStringToFile("1", socPath + ID_PATH)) {
       ALOGE("Not able to turn off host mode");
       result = false;
     }
 
-    if (!WriteStringToFile("0", VBUS_PATH)) {
+    if (!WriteStringToFile("0", socPath + VBUS_PATH)) {
       ALOGE("Not able to set Vbus state");
       result = false;
     }
 
-    if (!WriteStringToFile("0", USB_DATA_PATH)) {
+    if (!WriteStringToFile("0", socPath + USB_DATA_PATH)) {
       ALOGE("Not able to turn off usb connection notification");
       result = false;
     }
