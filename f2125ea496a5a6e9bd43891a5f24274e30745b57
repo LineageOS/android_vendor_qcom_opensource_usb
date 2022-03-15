@@ -41,6 +41,30 @@
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "2a908de0_8f292c81",
+        "filename": "hal/Usb.cpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 779,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2022-03-15T22:37:41Z",
+      "side": 1,
+      "message": "Ack",
+      "parentUuid": "9f507d14_238a722c",
+      "range": {
+        "startLine": 775,
+        "startChar": 0,
+        "endLine": 779,
+        "endChar": 0
+      },
+      "revId": "f2125ea496a5a6e9bd43891a5f24274e30745b57",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "1997b2ef_4297ba97",
@@ -102,6 +126,30 @@
       "side": 1,
       "message": "Isn\u0027t it just happen to be the same?",
       "parentUuid": "b11fcec4_0d51010e",
+      "range": {
+        "startLine": 61,
+        "startChar": 0,
+        "endLine": 62,
+        "endChar": 59
+      },
+      "revId": "f2125ea496a5a6e9bd43891a5f24274e30745b57",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "fc7442ef_b5d0704e",
+        "filename": "hal/Usb.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 62,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2022-03-15T22:37:41Z",
+      "side": 1,
+      "message": "https://review.lineageos.org/c/LineageOS/android_vendor_qcom_opensource_usb/+/326771",
+      "parentUuid": "8cfab4cb_7d85a488",
       "range": {
         "startLine": 61,
         "startChar": 0,
