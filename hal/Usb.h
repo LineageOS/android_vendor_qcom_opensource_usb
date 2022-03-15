@@ -16,6 +16,7 @@
 #pragma once
 
 #include <android-base/file.h>
+#include <android-base/properties.h>
 #include <android/hardware/usb/1.2/types.h>
 #include <android/hardware/usb/1.2/IUsbCallback.h>
 #include <android/hardware/usb/1.3/IUsb.h>
@@ -58,16 +59,18 @@ using ::android::hardware::Return;
 using ::android::hardware::Void;
 using ::android::base::WriteStringToFile;
 
-constexpr char kGadgetName[] = "a600000.dwc3";
-#define SOC_PATH "/sys/devices/platform/soc/a600000.ssusb/"
-#define ID_PATH SOC_PATH "id"
-#define VBUS_PATH SOC_PATH "b_sess"
-#define USB_DATA_PATH SOC_PATH "usb_data_enabled"
+#define USB_DEVICE_PROP "vendor.usb.device"
+#define SOC_PATH "/sys/devices/platform/soc/"
+#define ID_PATH "id"
+#define VBUS_PATH "b_sess"
+#define USB_DATA_PATH "usb_data_enabled"
+
+#define USB_CONTROLLER_PROP "vendor.usb.controller"
 #define GADGET_PATH "/config/usb_gadget/g1/"
 #define PULLUP_PATH GADGET_PATH "UDC"
 
 struct Usb : public IUsb {
-    Usb();
+    Usb(std::string deviceName, std::string gadgetName);
 
     Return<void> switchRole(const hidl_string& portName, const V1_0::PortRole& role) override;
     Return<void> setCallback(const sp<V1_0::IUsbCallback>& callback) override;
@@ -102,6 +105,9 @@ struct Usb : public IUsb {
 
     private:
         pthread_t mPoll;
+
+        std::string mDevicePath;
+        std::string mGadgetName;
 };
 
 }  // namespace implementation
