@@ -24,6 +24,30 @@
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "3e92f099_dbf25edd",
+        "filename": "hal/Usb.cpp",
+        "patchSetId": 3
+      },
+      "lineNbr": 76,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2022-03-16T14:04:34Z",
+      "side": 1,
+      "message": "Nothing, these paths are not present on all devices depending on dwc3 setup and can be ignored, the feature still works",
+      "parentUuid": "8c6bfb63_a55e04d2",
+      "range": {
+        "startLine": 68,
+        "startChar": 0,
+        "endLine": 76,
+        "endChar": 5
+      },
+      "revId": "7ab00f920aca59302942cfbe754af90eb5c5df95",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "b6fc5bbd_58197a43",
