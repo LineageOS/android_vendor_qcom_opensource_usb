@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "8c6bfb63_a55e04d2",
+        "filename": "hal/Usb.cpp",
+        "patchSetId": 3
+      },
+      "lineNbr": 76,
+      "author": {
+        "id": 10258
+      },
+      "writtenOn": "2022-03-16T08:28:42Z",
+      "side": 1,
+      "message": "I don\u0027t have the two nodes on msm-4.19, what do I need to pick?",
+      "range": {
+        "startLine": 68,
+        "startChar": 0,
+        "endLine": 76,
+        "endChar": 5
+      },
+      "revId": "7ab00f920aca59302942cfbe754af90eb5c5df95",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "b6fc5bbd_58197a43",
+        "filename": "hal/android.hardware.usb@1.3-service-qti.rc",
+        "patchSetId": 3
+      },
+      "lineNbr": 33,
+      "author": {
+        "id": 10258
+      },
+      "writtenOn": "2022-03-16T08:28:42Z",
+      "side": 1,
+      "message": "1. should move chown to the next drop root commit\n2. why post-fs? we chown sysfs on boot in general\n3. need to chown /config/usb_gadget/g1/UDC as well",
+      "range": {
+        "startLine": 33,
+        "startChar": 0,
+        "endLine": 33,
+        "endChar": 10
+      },
+      "revId": "7ab00f920aca59302942cfbe754af90eb5c5df95",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
