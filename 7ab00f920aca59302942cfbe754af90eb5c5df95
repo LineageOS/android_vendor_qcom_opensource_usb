@@ -48,6 +48,30 @@
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "81225870_88c11621",
+        "filename": "hal/Usb.cpp",
+        "patchSetId": 3
+      },
+      "lineNbr": 76,
+      "author": {
+        "id": 10258
+      },
+      "writtenOn": "2022-03-16T14:06:09Z",
+      "side": 1,
+      "message": "Then we should probably drop result\u003dfalse for the two, or the function always returns false",
+      "parentUuid": "3e92f099_dbf25edd",
+      "range": {
+        "startLine": 68,
+        "startChar": 0,
+        "endLine": 76,
+        "endChar": 5
+      },
+      "revId": "7ab00f920aca59302942cfbe754af90eb5c5df95",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "b6fc5bbd_58197a43",
