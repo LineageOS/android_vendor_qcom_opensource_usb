@@ -11,7 +11,7 @@ ifneq ($(TARGET_KERNEL_VERSION),$(filter $(TARGET_KERNEL_VERSION),4.9 4.14))
   PRODUCT_PACKAGES += android.hardware.usb@1.2-service-qti
 endif
 
-ifneq ($(filter taro kalama,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter taro kalama neo,$(TARGET_BOARD_PLATFORM)),)
   PRODUCT_PROPERTY_OVERRIDES += vendor.usb.use_gadget_hal=1
   PRODUCT_PACKAGES += android.hardware.usb.gadget@1.1-service-qti
   PRODUCT_PACKAGES += usb_compositions.conf
