@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "cb7e2de4_b8ceac3e",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 4
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 11801
+      },
+      "writtenOn": "2022-03-17T15:32:02Z",
+      "side": 1,
+      "message": "Is there any reason to not make this a board flag or something? At the very least, we should query the property once, not every time we call Usb::enableUsbDataSignal()...",
+      "revId": "054a1f87eeb3599e624ccda4df5f760a041f8753",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
