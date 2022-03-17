@@ -16,6 +16,24 @@
       "message": "Indentation fail?",
       "revId": "1e51886207efc91c7b0752ad7023fbf24c248dbf",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "a23af0b6_8f281c35",
+        "filename": "hal/Usb.cpp",
+        "patchSetId": 4
+      },
+      "lineNbr": 67,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2022-03-17T15:35:32Z",
+      "side": 1,
+      "message": "No? this file uses 2 spaces",
+      "parentUuid": "ee3af14c_eeb5c2f6",
+      "revId": "1e51886207efc91c7b0752ad7023fbf24c248dbf",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
