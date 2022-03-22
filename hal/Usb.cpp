@@ -61,18 +61,15 @@ Return<bool> Usb::enableUsbDataSignal(bool enable) {
     }
 
     if (!WriteStringToFile(mGadgetName, PULLUP_PATH)) {
-      ALOGE("Gadget cannot be pulled up");
-      result = false;
+      ALOGW("Gadget cannot be pulled up");
     }
   } else {
     if (!WriteStringToFile("1", mDevicePath + ID_PATH)) {
-      ALOGE("Not able to turn off host mode");
-      result = false;
+      ALOGW("Not able to turn off host mode");
     }
 
     if (!WriteStringToFile("0", mDevicePath + VBUS_PATH)) {
-      ALOGE("Not able to set Vbus state");
-      result = false;
+      ALOGW("Not able to set Vbus state");
     }
 
     if (!WriteStringToFile("0", mDevicePath + USB_DATA_PATH)) {
@@ -81,8 +78,7 @@ Return<bool> Usb::enableUsbDataSignal(bool enable) {
     }
 
     if (!WriteStringToFile("none", PULLUP_PATH)) {
-      ALOGE("Gadget cannot be pulled down");
-      result = false;
+      ALOGW("Gadget cannot be pulled down");
     }
   }
 
