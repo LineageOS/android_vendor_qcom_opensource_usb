@@ -64,6 +64,7 @@ using ::android::base::WriteStringToFile;
 #define ID_PATH "id"
 #define VBUS_PATH "b_sess"
 #define USB_DATA_PATH "usb_data_enabled"
+#define USB_DATA_PATH_SEC "/sys/devices/virtual/usb_notify/usb_control/disable"
 
 #define USB_CONTROLLER_PROP "vendor.usb.controller"
 #define GADGET_PATH "/config/usb_gadget/g1/"

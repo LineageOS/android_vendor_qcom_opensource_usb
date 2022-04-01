@@ -55,7 +55,8 @@ Return<bool> Usb::enableUsbDataSignal(bool enable) {
   ALOGI("Userspace turn %s USB data signaling", enable ? "on" : "off");
 
   if (enable) {
-    if (!WriteStringToFile("1", mDevicePath + USB_DATA_PATH)) {
+    if (!WriteStringToFile("1", mDevicePath + USB_DATA_PATH) &&
+        !WriteStringToFile("OFF", USB_DATA_PATH_SEC)) {
       ALOGE("Not able to turn on usb connection notification");
       result = false;
     }
@@ -72,7 +73,8 @@ Return<bool> Usb::enableUsbDataSignal(bool enable) {
       ALOGW("Not able to set Vbus state");
     }
 
-    if (!WriteStringToFile("0", mDevicePath + USB_DATA_PATH)) {
+    if (!WriteStringToFile("0", mDevicePath + USB_DATA_PATH) &&
+        !WriteStringToFile("ON", USB_DATA_PATH_SEC)) {
       ALOGE("Not able to turn off usb connection notification");
       result = false;
     }
