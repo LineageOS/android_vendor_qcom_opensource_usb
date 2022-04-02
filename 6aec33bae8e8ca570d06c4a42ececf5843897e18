@@ -16,6 +16,23 @@
       "message": "any objections?",
       "revId": "6aec33bae8e8ca570d06c4a42ececf5843897e18",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "6fc84aa9_16749cce",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2022-04-02T15:06:23Z",
+      "side": 1,
+      "message": "samsung 😐",
+      "revId": "6aec33bae8e8ca570d06c4a42ececf5843897e18",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
