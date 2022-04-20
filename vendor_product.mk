@@ -14,6 +14,7 @@ endif
 ifneq ($(filter taro kalama,$(TARGET_BOARD_PLATFORM)),)
   PRODUCT_PROPERTY_OVERRIDES += vendor.usb.use_gadget_hal=1
   PRODUCT_PACKAGES += android.hardware.usb.gadget@1.1-service-qti
+  PRODUCT_PACKAGES += usb_compositions.conf
 else
   PRODUCT_PROPERTY_OVERRIDES += vendor.usb.use_gadget_hal=0
 endif
