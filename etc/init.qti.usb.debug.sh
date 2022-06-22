@@ -27,6 +27,9 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
+# Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+
 prop_enabled=`getprop persist.vendor.usb.enable_ftrace 0`
 
 # bail out if its perf config
@@ -63,7 +66,7 @@ if [ -d $tracefs ]; then
     echo 1 > $tracefs/instances/usb/events/gadget/usb_gadget_vbus_draw/enable
 
     #DWC3 core runtime
-    echo 'name=="a600000.dwc3"' > $tracefs/instances/usb/events/rpm/filter
+    echo 'name~"a600000.*"' > $tracefs/instances/usb/events/rpm/filter
     echo 1 > $tracefs/instances/usb/events/rpm/rpm_resume/enable
     echo 1 > $tracefs/instances/usb/events/rpm/rpm_suspend/enable
     echo 1 > $tracefs/instances/usb/events/rpm/rpm_return_int/enable
