@@ -82,7 +82,7 @@ if [ "$(getprop persist.vendor.usb.config)" == "" -a "$(getprop ro.build.type)" 
     else
 	  case "$(getprop ro.baseband)" in
 	      "apq")
-	        if [[ "$target" == "neo" ]]; then
+	        if [ "$target" == "neo" ] || [ "$target" == "anorak" ]; then
 			setprop persist.vendor.usb.config diag,qdss,adb
 		else
 			setprop persist.vendor.usb.config diag,adb
