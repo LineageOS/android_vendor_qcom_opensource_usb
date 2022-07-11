@@ -1,24 +1,3 @@
-# USB init scripts
-PRODUCT_PACKAGES += init.qcom.usb.rc init.qcom.usb.sh
-
-# additional debugging on userdebug/eng builds
-ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
-  PRODUCT_PACKAGES += init.qti.usb.debug.sh
-  PRODUCT_PACKAGES += init.qti.usb.debug.rc
-endif
-
-ifneq ($(TARGET_KERNEL_VERSION),$(filter $(TARGET_KERNEL_VERSION),4.9 4.14))
-  PRODUCT_PACKAGES += android.hardware.usb@1.2-service-qti
-endif
-
-ifneq ($(filter taro kalama,$(TARGET_BOARD_PLATFORM)),)
-  PRODUCT_PROPERTY_OVERRIDES += vendor.usb.use_gadget_hal=1
-  PRODUCT_PACKAGES += android.hardware.usb.gadget@1.1-service-qti
-  PRODUCT_PACKAGES += usb_compositions.conf
-else
-  PRODUCT_PROPERTY_OVERRIDES += vendor.usb.use_gadget_hal=0
-endif
-
 #
 # Default property overrides for various function configurations
 # These can be further overridden at runtime in init*.rc files as needed
@@ -49,3 +28,37 @@ else
   PRODUCT_PROPERTY_OVERRIDES += vendor.usb.use_ffs_mtp=0
 endif
 
+ifneq ($(TARGET_KERNEL_VERSION),$(filter $(TARGET_KERNEL_VERSION),4.9 4.14))
+  PRODUCT_PACKAGES += android.hardware.usb@1.2-service-qti
+endif
+
+USB_USES_QMAA = $(TARGET_USES_QMAA)
+ifeq ($(TARGET_USES_QMAA_OVERRIDE_USB),true)
+       USB_USES_QMAA = false
+endif
+
+# USB init scripts
+ifeq ($(USB_USES_QMAA),true)
+  PRODUCT_PACKAGES += init.qti.usb.qmaa.rc
+else
+  PRODUCT_PACKAGES += init.qcom.usb.rc init.qcom.usb.sh
+
+  #
+  # USB Gadget HAL is enabled on newer targets and takes the place
+  # of the init-based configfs rules for setting USB compositions
+  #
+  ifneq ($(filter taro kalama,$(TARGET_BOARD_PLATFORM)),)
+    PRODUCT_PROPERTY_OVERRIDES += vendor.usb.use_gadget_hal=1
+    PRODUCT_PACKAGES += android.hardware.usb.gadget@1.1-service-qti
+    PRODUCT_PACKAGES += usb_compositions.conf
+  else
+    PRODUCT_PROPERTY_OVERRIDES += vendor.usb.use_gadget_hal=0
+  endif
+
+endif
+
+# additional debugging on userdebug/eng builds
+ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
+  PRODUCT_PACKAGES += init.qti.usb.debug.sh
+  PRODUCT_PACKAGES += init.qti.usb.debug.rc
+endif
