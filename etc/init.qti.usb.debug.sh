@@ -118,5 +118,11 @@ if [ -d $tracefs ]; then
     echo 1 > events/rpm/rpm_resume/enable
     echo 1 > events/rpm/rpm_suspend/enable
     echo 1 > events/rpm/rpm_return_int/enable
+
+    #xhci
+    mkdir $tracefs/instances/usb_xhci
+    echo 1 > $tracefs/instances/usb_xhci/events/xhci-hcd/enable
+
+    echo 1 > $tracefs/instances/usb_xhci/tracing_on
     echo 1 > tracing_on
 fi
