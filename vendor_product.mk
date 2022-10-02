@@ -7,14 +7,14 @@ PRODUCT_PROPERTY_OVERRIDES += vendor.usb.rmnet.func.name=gsi
 PRODUCT_PROPERTY_OVERRIDES += vendor.usb.rmnet.inst.name=rmnet
 PRODUCT_PROPERTY_OVERRIDES += vendor.usb.dpl.inst.name=dpl
 
-ifeq ($(TARGET_BOARD_PLATFORM), bengal)
+ifneq ($(filter bengal monaco,$(TARGET_BOARD_PLATFORM)),)
   PRODUCT_PROPERTY_OVERRIDES += vendor.usb.controller=4e00000.dwc3
 else
   PRODUCT_PROPERTY_OVERRIDES += vendor.usb.controller=a600000.dwc3
 endif
 
 # QDSS uses SW path on these targets
-ifneq ($(filter lahaina taro bengal kalama,$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter lahaina taro bengal kalama monaco,$(TARGET_BOARD_PLATFORM)),)
   PRODUCT_PROPERTY_OVERRIDES += vendor.usb.qdss.inst.name=qdss_sw
 else
   PRODUCT_PROPERTY_OVERRIDES += vendor.usb.qdss.inst.name=qdss
@@ -52,7 +52,7 @@ else
   # USB Gadget HAL is enabled on newer targets and takes the place
   # of the init-based configfs rules for setting USB compositions
   #
-  ifneq ($(filter taro kalama bengal,$(TARGET_BOARD_PLATFORM)),)
+  ifneq ($(filter taro kalama bengal monaco,$(TARGET_BOARD_PLATFORM)),)
     PRODUCT_PROPERTY_OVERRIDES += vendor.usb.use_gadget_hal=1
     PRODUCT_PACKAGES += android.hardware.usb.gadget@1.1-service-qti
     PRODUCT_PACKAGES += usb_compositions.conf
