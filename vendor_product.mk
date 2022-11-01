@@ -23,7 +23,11 @@ endif
 # Default property overrides for various function configurations
 # These can be further overridden at runtime in init*.rc files as needed
 #
+ifneq ($(filter anorak,$(TARGET_BOARD_PLATFORM)),)
+PRODUCT_PROPERTY_OVERRIDES += vendor.usb.rndis.func.name=rndis
+else
 PRODUCT_PROPERTY_OVERRIDES += vendor.usb.rndis.func.name=gsi
+endif
 PRODUCT_PROPERTY_OVERRIDES += vendor.usb.rmnet.func.name=gsi
 PRODUCT_PROPERTY_OVERRIDES += vendor.usb.rmnet.inst.name=rmnet
 PRODUCT_PROPERTY_OVERRIDES += vendor.usb.dpl.inst.name=dpl
