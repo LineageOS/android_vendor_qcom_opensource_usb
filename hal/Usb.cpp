@@ -91,6 +91,10 @@ Return<bool> Usb::enableUsbDataSignal(bool enable) {
     }
   }
 
+  if (result) {
+      this->queryPortStatus();
+  }
+
   return result;
 }
 
