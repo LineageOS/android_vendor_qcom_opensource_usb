@@ -54,9 +54,6 @@ if [ -d $tracefs ]; then
     echo 1 > $tracefs/instances/usb/events/dwc3/dwc3_gadget_giveback/enable
     echo 1 > $tracefs/instances/usb/events/dwc3/dwc3_prepare_trb/enable
     echo 1 > $tracefs/instances/usb/events/dwc3/dwc3_event/enable
-    echo 1 > $tracefs/instances/dwc3_readl/events/dwc3/dwc3_alloc_request/enable
-    echo 1 > $tracefs/instances/dwc3_readl/events/dwc3/dwc3_free_request/enable
-    echo 1 > $tracefs/instances/dwc3_readl/events/dwc3/dwc3_gadget_generic_cmd/enable
 
     # ucsi
     echo 1 > $tracefs/instances/usb/events/ucsi/ucsi_connector_change/enable
