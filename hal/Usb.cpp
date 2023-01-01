@@ -400,14 +400,16 @@ Status getCurrentRoleHelper(const std::string &portName, bool connected,
 
   if (!connected) return Status::SUCCESS;
 
-  if (type == PortRoleType::MODE) {
+  if (type == PortRoleType::MODE || type == PortRoleType::POWER_ROLE) {
     if (getAccessoryConnected(portName, &accessory) != Status::SUCCESS) {
       return Status::ERROR;
     }
     if (accessory == "analog_audio") {
-      *currentRole = static_cast<uint32_t>(PortMode_1_1::AUDIO_ACCESSORY);
+      *currentRole = type == PortRoleType::POWER_ROLE
+              ? static_cast<uint32_t>(PortPowerRole::SINK)
+              : static_cast<uint32_t>(PortMode_1_1::AUDIO_ACCESSORY);
       return Status::SUCCESS;
-    } else if (accessory == "debug") {
+    } else if (accessory == "debug" && type == PortRoleType::MODE) {
       *currentRole = static_cast<uint32_t>(PortMode_1_1::DEBUG_ACCESSORY);
       return Status::SUCCESS;
     }
