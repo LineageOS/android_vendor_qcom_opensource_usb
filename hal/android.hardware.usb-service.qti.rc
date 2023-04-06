@@ -1,9 +1,14 @@
 # Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 
-on init
+on early-init
     chown system usb /sys/class/usb_notify/usb_control/disable
     chown system usb /sys/devices/platform/soc/${vendor.usb.device:-a600000.ssusb}/usb_data_enabled
+    chown system usb /sys/devices/platform/soc/${vendor.usb.device:-a600000.ssusb}/mode
+    chmod 664 /sys/devices/platform/soc/${vendor.usb.device:-a600000.ssusb}/usb_data_enabled
+    chmod 664 /sys/devices/platform/soc/${vendor.usb.device:-a600000.ssusb}/mode
+    # Disable USB data initially, even with existing connected device.
+    write /sys/devices/platform/soc/${vendor.usb.device:-a600000.ssusb}/usb_data_enabled 0
 
 service vendor.usb-hal /vendor/bin/hw/android.hardware.usb-service.qti
     interface aidl android.hardware.usb.IUsb/default
