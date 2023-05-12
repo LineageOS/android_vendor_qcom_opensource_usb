@@ -188,3 +188,7 @@ esac
 if [ -d /config/usb_gadget/g1/functions/uvc.0 ]; then
 	setprop vendor.usb.uvc.function.init 1
 fi
+
+if [ -d /config/usb_gadget/g1/functions/uac2.0 ]; then
+	setprop vendor.usb.uac2.function.init 1
+fi
