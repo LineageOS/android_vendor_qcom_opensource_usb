@@ -223,3 +223,16 @@ case "$target" in
 	fi
     ;;
 esac
+
+#Configure class, subclass, protocol for RNDIS SW path to be detected by Windows
+case "$target" in
+"anorak")
+	if [ -d /config/usb_gadget/g1/functions/rndis.rndis ]; then
+		cd /config/usb_gadget/g1/functions/rndis.rndis
+
+		echo ef > class
+		echo 4 > subclass
+		echo 1 > protocol
+	fi
+    ;;
+esac
