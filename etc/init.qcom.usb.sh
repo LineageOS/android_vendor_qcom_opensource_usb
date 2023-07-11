@@ -211,3 +211,14 @@ esac
 if [ -d /config/usb_gadget/g1/functions/uvc.0 ]; then
 	setprop vendor.usb.uvc.function.init 1
 fi
+
+# enable ncm
+case "$target" in
+"neo" | "anorak")
+	if [ -d /config/usb_gadget/g1/functions/ncm.0 ]; then
+		cd /config/usb_gadget/g1/functions/ncm.0
+
+		echo WINNCM > os_desc/interface.ncm/compatible_id
+	fi
+    ;;
+esac
