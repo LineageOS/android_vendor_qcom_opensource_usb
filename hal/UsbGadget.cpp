@@ -243,7 +243,7 @@ static V1_0::Status validateAndSetVidPid(uint64_t functions) {
   V1_0::Status ret = Status::SUCCESS;
   switch (functions) {
     case static_cast<uint64_t>(GadgetFunction::ADB):
-      ret = setVidPid("0x18d1", "0x4ee7");
+      ret = setVidPid("0x18d1", "0x4e11");
       break;
     case static_cast<uint64_t>(GadgetFunction::MTP):
       ret = setVidPid("0x18d1", "0x4ee1");

@@ -26,3 +26,10 @@ sh_binary {
     src: "init.qti.usb.debug.sh",
     vendor: true,
 }
+
+prebuilt_etc {
+    name: "init.qti.usb.qmaa.rc",
+    src: "init.qti.usb.qmaa.rc",
+    vendor: true,
+    sub_dir: "init",
+}
