@@ -1923,3 +1923,8 @@ on property:vendor.usb.uvc.function.init=1
     symlink /config/usb_gadget/g1/functions/uvc.0/streaming/header/h1 /config/usb_gadget/g1/functions/uvc.0/streaming/class/fs/h1
     symlink /config/usb_gadget/g1/functions/uvc.0/streaming/header/h1 /config/usb_gadget/g1/functions/uvc.0/streaming/class/hs/h1
     symlink /config/usb_gadget/g1/functions/uvc.0/streaming/header/h /config/usb_gadget/g1/functions/uvc.0/streaming/class/ss/h
+
+on property:vendor.usb.uac2.function.init=1
+	chown system system  config/usb_gadget/g1/functions/uac2.0/c_status
+	chown system system  config/usb_gadget/g1/functions/uac2.0/p_status
+	write config/usb_gadget/g1/functions/uac2.0/c_sync adaptive
