@@ -24,16 +24,20 @@ BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
 WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+Changes from Qualcomm Innovation Center are provided under the following license:
+Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 -->
 <manifest version="1.0" type="device">
     <hal format="hidl">
         <name>android.hardware.usb.gadget</name>
         <transport>hwbinder</transport>
-        <version>1.1</version>
+        <version>1.2</version>
         <interface>
             <name>IUsbGadget</name>
             <instance>default</instance>
         </interface>
-        <fqname>@1.1::IUsbGadget/default</fqname>
+        <fqname>@1.2::IUsbGadget/default</fqname>
     </hal>
 </manifest>
