@@ -15,12 +15,16 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
-#ifndef ANDROID_HARDWARE_USB_GADGET_V1_1_USBGADGET_H
-#define ANDROID_HARDWARE_USB_GADGET_V1_1_USBGADGET_H
+#ifndef ANDROID_HARDWARE_USB_GADGET_V1_2_USBGADGET_H
+#define ANDROID_HARDWARE_USB_GADGET_V1_2_USBGADGET_H
 
-#include <android/hardware/usb/gadget/1.1/IUsbGadget.h>
+#include <android/hardware/usb/gadget/1.2/IUsbGadget.h>
 #include <hidl/Status.h>
 #include <mutex>
 
@@ -28,7 +32,7 @@ namespace android {
 namespace hardware {
 namespace usb {
 namespace gadget {
-namespace V1_1 {
+namespace V1_2 {
 namespace implementation {
 
 using ::android::hardware::Return;
@@ -46,6 +50,7 @@ struct UsbGadget : public IUsbGadget {
 
   Return<Status> reset() override;
 
+  Return<void> getUsbSpeed(const sp<V1_2::IUsbGadgetCallback>& callback) override;
 private:
   V1_0::Status tearDownGadget();
   V1_0::Status setupFunctions(uint64_t functions,
@@ -63,10 +68,10 @@ private:
 };
 
 }  // namespace implementation
-}  // namespace V1_1
+}  // namespace V1_2
 }  // namespace gadget
 }  // namespace usb
 }  // namespace hardware
 }  // namespace android
 
-#endif  // ANDROID_HARDWARE_USB_V1_1_USBGADGET_H
+#endif  // ANDROID_HARDWARE_USB_V1_2_USBGADGET_H
