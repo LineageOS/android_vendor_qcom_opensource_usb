@@ -15,12 +15,17 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
-#define LOG_TAG "android.hardware.usb.gadget@1.1-service-qti"
+#define LOG_TAG "android.hardware.usb.gadget@1.2-service-qti"
 
 #include <android-base/file.h>
 #include <android-base/properties.h>
+#include <android-base/strings.h>
 #include <functional>
 #include <map>
 #include <tuple>
@@ -51,7 +56,7 @@ namespace android {
 namespace hardware {
 namespace usb {
 namespace gadget {
-namespace V1_1 {
+namespace V1_2 {
 namespace implementation {
 
 using ::android::sp;
@@ -59,9 +64,10 @@ using ::android::base::GetProperty;
 using ::android::base::SetProperty;
 using ::android::base::WriteStringToFile;
 using ::android::base::ReadFileToString;
+using ::android::base::Trim;
 using ::android::hardware::Return;
 using ::android::hardware::Void;
-using ::android::hardware::usb::gadget::V1_0::GadgetFunction;
+using ::android::hardware::usb::gadget::V1_2::GadgetFunction;
 using ::android::hardware::usb::gadget::V1_0::Status;
 using ::android::hardware::usb::gadget::addAdb;
 using ::android::hardware::usb::gadget::kDisconnectWaitUs;
@@ -69,6 +75,7 @@ using ::android::hardware::usb::gadget::linkFunction;
 using ::android::hardware::usb::gadget::resetGadget;
 using ::android::hardware::usb::gadget::setVidPid;
 using ::android::hardware::usb::gadget::unlinkFunctions;
+using ::android::hardware::usb::gadget::V1_2::UsbSpeed;
 
 static std::map<std::string, std::tuple<std::string, std::string, std::string> >
 supported_compositions;
@@ -116,6 +123,36 @@ Return<void> UsbGadget::getCurrentUsbFunctions(
   if (!ret.isOk())
     ALOGE("Call to getCurrentUsbFunctionsCb failed %s",
           ret.description().c_str());
+
+  return Void();
+}
+
+Return<void> UsbGadget::getUsbSpeed
+	(const sp<V1_2::IUsbGadgetCallback>& callback)
+{
+  if (!callback) return Void();
+
+  std::string gadgetName = GetProperty(USB_CONTROLLER_PROP, "");
+  std::string current_speed;
+
+ if (ReadFileToString("/sys/class/udc/" + gadgetName + "/current_speed",
+			&current_speed)) {
+      current_speed = Trim(current_speed);
+
+      UsbSpeed speed = UsbSpeed::UNKNOWN;
+      if (current_speed == "low-speed")
+        speed = UsbSpeed::LOWSPEED;
+      else if (current_speed == "full-speed")
+        speed = UsbSpeed::FULLSPEED;
+      else if (current_speed == "high-speed")
+        speed = UsbSpeed::HIGHSPEED;
+      else if (current_speed == "super-speed")
+        speed = UsbSpeed::SUPERSPEED;
+      else if (current_speed == "super-speed-plus")
+        speed = UsbSpeed::SUPERSPEED_10Gb;
+
+      callback->getUsbSpeedCb(speed);
+  }
 
   return Void();
 }
@@ -172,7 +209,7 @@ static std::map<std::string, std::function<std::string()> > supported_funcs {
   { "dpl",              [](){ return GetProperty(RMNET_FUNC_NAME_PROP, "gsi") + "." + GetProperty(DPL_INST_NAME_PROP, "dpl"); } },
   { "mass_storage",     [](){ return "mass_storage.0"; } },
   { "mtp",              [](){ return "ffs.mtp"; } },
-  { "ncm",              [](){ return "ncm.0"; } },
+  { "ncm",              [](){ return "ncm.gs6"; } },
   { "ptp",              [](){ return "ffs.ptp"; } },
   { "qdss",             [](){ return qdssFuncname("0"); } },
   { "qdss_debug",       [](){ return qdssFuncname("1"); } },
@@ -268,6 +305,12 @@ static V1_0::Status validateAndSetVidPid(uint64_t functions) {
       break;
     case GadgetFunction::ADB | GadgetFunction::MIDI:
       ret = setVidPid("0x18d1", "0x4ee9");
+      break;
+    case static_cast<uint64_t>(GadgetFunction::NCM):
+      ret = setVidPid("0x18d1", "0x4eeb");
+      break;
+    case GadgetFunction::ADB | GadgetFunction::NCM:
+      ret = setVidPid("0x05c6", "0x908c");
       break;
     case static_cast<uint64_t>(GadgetFunction::ACCESSORY):
       ret = setVidPid("0x18d1", "0x2d00");
@@ -445,7 +488,7 @@ error:
   return Void();
 }
 }  // namespace implementation
-}  // namespace V1_1
+}  // namespace V1_2
 }  // namespace gadget
 }  // namespace usb
 }  // namespace hardware
@@ -455,8 +498,8 @@ int main() {
   using android::base::GetProperty;
   using android::hardware::configureRpcThreadpool;
   using android::hardware::joinRpcThreadpool;
-  using android::hardware::usb::gadget::V1_1::IUsbGadget;
-  using android::hardware::usb::gadget::V1_1::implementation::UsbGadget;
+  using android::hardware::usb::gadget::V1_2::IUsbGadget;
+  using android::hardware::usb::gadget::V1_2::implementation::UsbGadget;
 
   std::string gadgetName = GetProperty("persist.vendor.usb.controller",
       GetProperty(USB_CONTROLLER_PROP, ""));
