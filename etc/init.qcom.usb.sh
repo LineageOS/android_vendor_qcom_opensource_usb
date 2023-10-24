@@ -112,7 +112,20 @@ if [ "$(getprop persist.vendor.usb.config)" == "" -a "$(getprop ro.build.type)" 
 	              "sdm845" | "sdm710")
 		          setprop persist.vendor.usb.config diag,serial_cdev,rmnet,dpl,adb
 		      ;;
-	              "msmnile" | "sm6150" | "trinket" | "lito" | "atoll" | "bengal" | "lahaina" | "holi" | "taro" | "parrot" | "ravelin" | "kalama" | "crow")
+	              "msmnile")
+		               case "$soc_id" in
+			               "362" | "367")
+			                  setprop persist.vendor.usb.config diag,adb
+			               ;;
+			               *)
+			                  setprop persist.vendor.usb.config diag,serial_cdev,rmnet,dpl,qdss,adb
+			               ;;
+		               esac
+		      ;;
+	              "gen4")
+			  setprop persist.vendor.usb.config adb
+		      ;;
+	              "sm6150" | "trinket" | "lito" | "atoll" | "bengal" | "lahaina" | "holi" | "taro" | "parrot" | "ravelin" | "kalama" | "crow")
 			  setprop persist.vendor.usb.config diag,serial_cdev,rmnet,dpl,qdss,adb
 		      ;;
 	              *)
