@@ -28,6 +28,11 @@
 #
 #
 
+# Changes from Qualcomm Innovation Center are provided under the following license:
+# Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+
 # Set platform variables
 soc_hwplatform=`cat /sys/devices/soc0/hw_platform 2> /dev/null`
 soc_machine=`cat /sys/devices/soc0/machine 2> /dev/null`
@@ -53,7 +58,11 @@ if [ "$(getprop persist.vendor.usb.config)" == "" -a "$(getprop ro.build.type)" 
     else
 	  case "$(getprop ro.baseband)" in
 	      "apq")
-	          setprop persist.vendor.usb.config diag,adb
+	        if [ "$target" == "neo" ] || [ "$target" == "anorak" ]; then
+			setprop persist.vendor.usb.config diag,qdss,adb
+		else
+			setprop persist.vendor.usb.config diag,adb
+		fi
 	      ;;
 	      *)
 	      case "$soc_hwplatform" in
@@ -103,7 +112,7 @@ if [ "$(getprop persist.vendor.usb.config)" == "" -a "$(getprop ro.build.type)" 
 	              "sdm845" | "sdm710")
 		          setprop persist.vendor.usb.config diag,serial_cdev,rmnet,dpl,adb
 		      ;;
-	              "msmnile" | "sm6150" | "trinket" | "lito" | "atoll" | "bengal" | "lahaina" | "holi" | "taro" | "kalama" | "crow")
+	              "msmnile" | "sm6150" | "trinket" | "lito" | "atoll" | "bengal" | "lahaina" | "holi" | "taro" | "parrot" | "ravelin" | "kalama" | "crow")
 			  setprop persist.vendor.usb.config diag,serial_cdev,rmnet,dpl,qdss,adb
 		      ;;
 	              *)
@@ -192,3 +201,27 @@ fi
 if [ -d /config/usb_gadget/g1/functions/uac2.0 ]; then
 	setprop vendor.usb.uac2.function.init 1
 fi
+
+# enable ncm
+case "$target" in
+"neo" | "anorak")
+	if [ -d /config/usb_gadget/g1/functions/ncm.gs6 ]; then
+		cd /config/usb_gadget/g1/functions/ncm.gs6
+
+		echo WINNCM > os_desc/interface.ncm/compatible_id
+	fi
+    ;;
+esac
+
+#Configure class, subclass, protocol for RNDIS SW path to be detected by Windows
+case "$target" in
+"anorak")
+	if [ -d /config/usb_gadget/g1/functions/rndis.rndis ]; then
+		cd /config/usb_gadget/g1/functions/rndis.rndis
+
+		echo ef > class
+		echo 4 > subclass
+		echo 1 > protocol
+	fi
+    ;;
+esac
