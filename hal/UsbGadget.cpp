@@ -101,30 +101,6 @@ static void createCompositionsMap(std:: string fileName) {
   }
 }
 
-static std::map<std::string, std::tuple<std::string, std::string, std::string> >
-supported_compositions;
-
-static void createCompositionsMap(std:: string fileName) {
-  std::ifstream compositions(fileName);
-  std::string line;
-
-  while (std::getline(compositions, line)) {
-    std::string prop;
-    std::tuple<std::string, std::string, std::string> vpa;
-    // Ignore comments in the file
-    auto pos = line.find('#');
-    if (pos != std::string::npos)
-      line.erase(pos);
-
-    std::stringstream words(line);
-
-    words >> prop >> std::get<0>(vpa) >> std::get<1>(vpa) >> std::get<2>(vpa);
-    // If we get vpa[1], we have the three minimum values needed. Or else we skip
-    if (!std::get<1>(vpa).empty())
-      supported_compositions.insert_or_assign(prop, vpa);
-  }
-}
-
 UsbGadget::UsbGadget(const char* const gadget)
     : mCurrentUsbFunctionsApplied(false),
       mMonitorFfs(gadget) {
