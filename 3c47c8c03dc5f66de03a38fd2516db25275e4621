@@ -16,6 +16,23 @@
       "message": "https://review.lineageos.org/c/LineageOS/android_device_xiaomi_sm8250-common/+/394103/comment/24ad7417_b9d72100/",
       "revId": "3c47c8c03dc5f66de03a38fd2516db25275e4621",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "b102f38d_a40516c3",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 32245
+      },
+      "writtenOn": "2024-06-24T07:40:07Z",
+      "side": 1,
+      "message": "Notes for anyone who wants to use it:\n- What you have to do in your device tree: Add overlays for //packages/services/DeviceAsWebcam, and set the property `ro.usb.uvc.enabled\u003dtrue`\n- android13-5.10 is the first kernel that supports it, older kernels would require backports from that kernel\n- Currently, You have to select Webcam mode from Default USB configuration in Developer settings. Selecting from USB notification doesn\u0027t work.\n- It doesn\u0027t work on legacy QCOM devices that uses the old mm-camera camera stack, at least for mine.",
+      "revId": "3c47c8c03dc5f66de03a38fd2516db25275e4621",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
