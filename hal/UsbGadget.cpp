@@ -331,6 +331,12 @@ static V1_0::Status validateAndSetVidPid(uint64_t functions) {
 	    GadgetFunction::AUDIO_SOURCE:
       ret = setVidPid("0x18d1", "0x2d05");
       break;
+    case GadgetFunction::UVC:
+      ret = setVidPid("0x18d1", "0x4eed");
+      break;
+    case GadgetFunction::ADB | GadgetFunction::UVC:
+      ret = setVidPid("0x18d1", "0x4eee");
+      break;
     default:
       ALOGE("Combination not supported");
       ret = Status::CONFIGURATION_NOT_SUPPORTED;
