@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "d29c54bc_d4d807dc",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 32245
+      },
+      "writtenOn": "2024-06-24T14:59:26Z",
+      "side": 1,
+      "message": "When rebasing onto lanai CLO tag (which is AIDL HAL), replace `(1 \u003c\u003c 7)` with `GadgetFunction::UVC`",
+      "revId": "10c592ddb42c1d50e9091d8ff3f541b6a43eb9d1",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
