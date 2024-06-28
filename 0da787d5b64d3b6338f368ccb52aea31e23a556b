@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "b6c0026f_1a25d669",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 32245
+      },
+      "writtenOn": "2024-06-28T13:18:58Z",
+      "side": 1,
+      "message": "BTW, The commit https://android.googlesource.com/platform/packages/services/DeviceAsWebcam/+/d079a82ba4f773210c01d488d2dfa1d4d25be8e2 causes inverted color on QCOM devices on QPR3",
+      "revId": "0da787d5b64d3b6338f368ccb52aea31e23a556b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
