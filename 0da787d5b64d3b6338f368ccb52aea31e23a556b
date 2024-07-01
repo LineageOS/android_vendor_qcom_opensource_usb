@@ -33,6 +33,24 @@
       "message": "Works great on OnePlus 7T Pro (hotdog)",
       "revId": "0da787d5b64d3b6338f368ccb52aea31e23a556b",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "58ab5cca_68ba14d0",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 30475
+      },
+      "writtenOn": "2024-07-01T16:08:37Z",
+      "side": 1,
+      "message": "Yeah... otherwise works great on Pyxis",
+      "parentUuid": "b6c0026f_1a25d669",
+      "revId": "0da787d5b64d3b6338f368ccb52aea31e23a556b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
