@@ -16,6 +16,23 @@
       "message": "BTW, The commit https://android.googlesource.com/platform/packages/services/DeviceAsWebcam/+/d079a82ba4f773210c01d488d2dfa1d4d25be8e2 causes inverted color on QCOM devices on QPR3",
       "revId": "0da787d5b64d3b6338f368ccb52aea31e23a556b",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "44a06f45_c4cfa269",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 9760
+      },
+      "writtenOn": "2024-07-01T10:36:47Z",
+      "side": 1,
+      "message": "Works great on OnePlus 7T Pro (hotdog)",
+      "revId": "0da787d5b64d3b6338f368ccb52aea31e23a556b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
