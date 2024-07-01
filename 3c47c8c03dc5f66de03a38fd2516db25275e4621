@@ -68,6 +68,23 @@
       "message": "Confirmed it\u0027s working on Xperia 1 V with patches\n\nhttps://review.lineageos.org/c/LineageOS/android_vendor_qcom_opensource_usb/+/395937\nhttps://review.lineageos.org/c/LineageOS/android_device_xiaomi_sm8250-common/+/394103",
       "revId": "3c47c8c03dc5f66de03a38fd2516db25275e4621",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "79cec1ef_8224a31f",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 9760
+      },
+      "writtenOn": "2024-07-01T10:36:54Z",
+      "side": 1,
+      "message": "Works great on OnePlus 7T Pro (hotdog)",
+      "revId": "3c47c8c03dc5f66de03a38fd2516db25275e4621",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
