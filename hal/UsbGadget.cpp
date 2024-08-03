@@ -283,65 +283,103 @@ int UsbGadget::addFunctionsFromPropString(std::string prop, bool &ffsEnabled, in
 
 static V1_0::Status validateAndSetVidPid(uint64_t functions) {
   V1_0::Status ret = Status::SUCCESS;
+  std::string vid, pid, composition;
+
   switch (functions) {
     case static_cast<uint64_t>(GadgetFunction::ADB):
-      ret = setVidPid("0x18d1", "0x4e11");
+      vid = "0x18d1";
+      pid = "0x4e11";
+      composition="adb";
       break;
     case static_cast<uint64_t>(GadgetFunction::MTP):
-      ret = setVidPid("0x18d1", "0x4ee1");
+      vid = "0x18d1";
+      pid = "0x4ee1";
+      composition="mtp";
       break;
     case GadgetFunction::ADB | GadgetFunction::MTP:
-      ret = setVidPid("0x18d1", "0x4ee2");
+      vid = "0x18d1";
+      pid = "0x4ee2";
+      composition="mtp,adb";
       break;
     case static_cast<uint64_t>(GadgetFunction::RNDIS):
-      ret = setVidPid("0x18d1", "0x4ee3");
+      vid = "0x18d1";
+      pid = "0x4ee3";
+      composition="rndis";
       break;
     case GadgetFunction::ADB | GadgetFunction::RNDIS:
-      ret = setVidPid("0x18d1", "0x4ee4");
+      vid = "0x18d1";
+      pid = "0x4ee4";
+      composition="rndis,adb";
       break;
     case static_cast<uint64_t>(GadgetFunction::PTP):
-      ret = setVidPid("0x18d1", "0x4ee5");
+      vid = "0x18d1";
+      pid = "0x4ee5";
+      composition="ptp";
       break;
     case GadgetFunction::ADB | GadgetFunction::PTP:
-      ret = setVidPid("0x18d1", "0x4ee6");
+      vid = "0x18d1";
+      pid = "0x4ee6";
+      composition="ptp,adb";
       break;
     case static_cast<uint64_t>(GadgetFunction::MIDI):
-      ret = setVidPid("0x18d1", "0x4ee8");
+      vid = "0x18d1";
+      pid = "0x4ee8";
+      composition="midi";
       break;
     case GadgetFunction::ADB | GadgetFunction::MIDI:
-      ret = setVidPid("0x18d1", "0x4ee9");
+      vid = "0x18d1";
+      pid = "0x4ee9";
+      composition="midi,adb";
       break;
     case static_cast<uint64_t>(GadgetFunction::NCM):
-      ret = setVidPid("0x18d1", "0x4eeb");
+      vid = "0x18d1";
+      pid = "0x4eeb";
+      composition="ncm";
       break;
     case GadgetFunction::ADB | GadgetFunction::NCM:
-      ret = setVidPid("0x05c6", "0x908c");
+      vid = "0x18d1";
+      pid= "0x908c";
+      composition="ncm,adb";
       break;
     case static_cast<uint64_t>(GadgetFunction::ACCESSORY):
-      ret = setVidPid("0x18d1", "0x2d00");
+      vid = "0x18d1";
+      pid = "0x2d00";
+      composition="accessory";
       break;
     case GadgetFunction::ADB | GadgetFunction::ACCESSORY:
-      ret = setVidPid("0x18d1", "0x2d01");
+      vid = "0x18d1";
+      pid = "0x2d01";
+      composition="accessory,adb";
       break;
     case static_cast<uint64_t>(GadgetFunction::AUDIO_SOURCE):
-      ret = setVidPid("0x18d1", "0x2d02");
+      vid = "0x18d1";
+      pid = "0x2d02";
+      composition="audio_source";
       break;
     case GadgetFunction::ADB | GadgetFunction::AUDIO_SOURCE:
-      ret = setVidPid("0x18d1", "0x2d03");
+      vid = "0x18d1";
+      pid = "0x2d03";
+      composition="audio_source,adb";
       break;
     case GadgetFunction::ACCESSORY | GadgetFunction::AUDIO_SOURCE:
-      ret = setVidPid("0x18d1", "0x2d04");
+      vid = "0x18d1";
+      pid = "0x2d04";
+      composition="accessory,audio_source";
       break;
     case GadgetFunction::ADB | GadgetFunction::ACCESSORY |
 	    GadgetFunction::AUDIO_SOURCE:
-      ret = setVidPid("0x18d1", "0x2d05");
+      vid = "0x18d1";
+      pid = "0x2d05";
+      composition="accessory,audio_source,adb";
       break;
     case kGadgetFunctionUvc:
         if (!GetBoolProperty(UVC_ENABLED_PROP, false)) {
             ALOGE("UVC function not enabled by config");
             ret = Status::CONFIGURATION_NOT_SUPPORTED;
         } else {
-            ret = setVidPid("0x18d1", "0x4eed");
+            vid = "0x18d1";
+            pid = "0x4eed";
+            composition="uvc";
         }
         break;
     case GadgetFunction::ADB | kGadgetFunctionUvc:
@@ -349,14 +387,28 @@ static V1_0::Status validateAndSetVidPid(uint64_t functions) {
             ALOGE("UVC function not enabled by config");
             ret = Status::CONFIGURATION_NOT_SUPPORTED;
         } else {
-            ret = setVidPid("0x18d1", "0x4eee");
+            vid = "0x18d1";
+            pid = "0x4eee";
+            composition="uvc,adb";
         }
         break;
     default:
       ALOGE("Combination not supported");
       ret = Status::CONFIGURATION_NOT_SUPPORTED;
   }
-  return ret;
+
+  if (ret != Status::SUCCESS) return ret;
+
+  ALOGE("Check if composition %s is supported", composition.c_str());
+  if (supported_compositions.count(composition)) {
+    ALOGI("Composition %s is supported", composition.c_str());
+    auto [comp_vid, comp_pid, actual_order] = supported_compositions[composition];
+    vid = comp_vid;
+    pid = comp_pid;
+  }
+
+  ALOGI("Setting vid/pid to %s/%s", vid.c_str(), pid.c_str());
+  return setVidPid(vid.c_str(), pid.c_str());
 }
 
 V1_0::Status UsbGadget::setupFunctions(
