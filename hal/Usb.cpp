@@ -50,7 +50,15 @@
 
 #define VENDOR_USB_ADB_DISABLED_PROP "vendor.sys.usb.adb.disabled"
 #define USB_CONTROLLER_PROP "vendor.usb.controller"
+#define GADGET_PATH "/config/usb_gadget/g1/"
+#define PULLUP_PATH GADGET_PATH "UDC"
 #define USB_MODE_PATH "/sys/bus/platform/devices/"
+
+#define USB_DEVICE_PROP "vendor.usb.device"
+#define SOC_PATH "/sys/devices/platform/soc/"
+#define ID_PATH "id"
+#define VBUS_PATH "b_sess"
+#define USB_DATA_PATH "usb_data_enabled"
 
 namespace aidl {
 namespace android {
@@ -116,14 +124,38 @@ ScopedAStatus Usb::enableUsbData(const std::string& in_portName, bool in_enable,
   if (!in_enable) {
     ret = WriteStringToFile("1", dwcDriver + "dynamic_disable");
     if (!ret) {
-      status = Status::ERROR;
-      goto out;
+      ret = WriteStringToFile("1", mDevicePath + ID_PATH);
+      if (!ret) {
+        ALOGW("Not able to turn off host mode");
+      }
+      ret = WriteStringToFile("0", mDevicePath + VBUS_PATH);
+      if (!ret) {
+        ALOGW("Not able to set Vbus state");
+      }
+      ret = WriteStringToFile("0", mDevicePath + USB_DATA_PATH);
+      if (!ret) {
+        ALOGE("Not able to turn off usb connection notification");
+        status = Status::ERROR;
+        goto out;
+      }
+      ret = WriteStringToFile("none", PULLUP_PATH);
+      if (!ret) {
+        ALOGW("Gadget cannot be pulled down");
+      }
     }
   } else {
     ret = WriteStringToFile("0", dwcDriver + "dynamic_disable");
     if (!ret) {
-      status = Status::ERROR;
-      goto out;
+      ret = WriteStringToFile("1", mDevicePath + USB_DATA_PATH);
+      if (!ret) {
+        ALOGE("Not able to turn on usb connection notification");
+        status = Status::ERROR;
+        goto out;
+      }
+      ret = WriteStringToFile(mGadgetName, PULLUP_PATH);
+      if (!ret) {
+        ALOGW("Gadget cannot be pulled up");
+      }
     }
   }
 
@@ -270,7 +302,9 @@ wait_again:
   return roleSwitch;
 }
 
-Usb::Usb() : mPartnerUp(false), mContaminantPresence(false) { }
+Usb::Usb(std::string deviceName, std::string gadgetName)
+        : mPartnerUp(false), mContaminantPresence(false),
+          mDevicePath(SOC_PATH + deviceName + "/"), mGadgetName(gadgetName) { }
 
 ScopedAStatus Usb::switchRole(const std::string &portName, const PortRole &newRole,
     int64_t in_transactionId) {
@@ -1197,10 +1231,13 @@ out:
 }  // namespace aidl
 
 int main() {
+    using android::base::GetProperty;
     using ::aidl::android::hardware::usb::Usb;
 
     ABinderProcess_setThreadPoolMaxThreadCount(0);
-    std::shared_ptr<Usb> usb = ndk::SharedRefBase::make<Usb>();
+    std::shared_ptr<Usb> usb = ndk::SharedRefBase::make<Usb>(
+            GetProperty(USB_DEVICE_PROP, "a600000.ssusb"),
+            GetProperty(USB_CONTROLLER_PROP, "a600000.dwc3"));
 
     const std::string instance = std::string(Usb::descriptor) + "/default";
     binder_status_t status = AServiceManager_addService(usb->asBinder().get(), instance.c_str());
