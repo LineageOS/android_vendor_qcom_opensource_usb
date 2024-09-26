@@ -214,7 +214,7 @@ static std::string appendRoleNodeHelper(const std::string &portName, PortRole::T
           return port_type;
         // port_type doesn't exist for UCSI. in that case fall back to data_role
       }
-      //fall-through
+      FALLTHROUGH_INTENDED;
       case PortRole::dataRole:
         return node + "/data_role";
       case PortRole::powerRole:

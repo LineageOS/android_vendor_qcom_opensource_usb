@@ -1,8 +1,7 @@
 cc_defaults {
     name: "qti_usb_hal_defaults",
     cflags: [
-        "-Wno-unused-parameter",
-        "-Wno-unused-variable",
+        "-Werror",
     ],
     vendor: true,
     relative_install_path: "hw",
