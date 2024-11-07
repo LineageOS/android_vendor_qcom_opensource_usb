@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "9468eea4_1175e869",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 21290
+      },
+      "writtenOn": "2024-11-07T21:30:59Z",
+      "side": 1,
+      "message": "Why was this done? This partial revert fixes the usb controls which used to be greyed out after the original change on some devices (sm8450, sm8550, maybe more).",
+      "revId": "ec6f8086e266bad08b1cc5ee399c1f8eef53a724",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
