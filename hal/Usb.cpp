@@ -439,33 +439,33 @@ static Status getCurrentRoleHelper(const std::string &portName, bool connected,
 
   extractRole(roleName);
 
-  switch (currentRole.getTag()) {
-    case PortRole::powerRole:
-      if (roleName == "source") {
-        currentRole.set<PortRole::powerRole>(PortPowerRole::SOURCE);
-      } else if (roleName == "sink") {
-        currentRole.set<PortRole::powerRole>(PortPowerRole::SINK);
-      }
-      break;
-    case PortRole::dataRole:
-      if (roleName == "host") {
-        currentRole.set<PortRole::dataRole>(PortDataRole::HOST);
-      } else if (roleName == "device") {
-        currentRole.set<PortRole::dataRole>(PortDataRole::DEVICE);
-      }
-      break;
-    case PortRole::mode:
-      if (roleName == "source") {
-        currentRole.set<PortRole::mode>(PortMode::DFP);
-      } else if (roleName == "sink") {
-        currentRole.set<PortRole::mode>(PortMode::UFP);
-      } else if (roleName == "dual") {
-        currentRole.set<PortRole::mode>(PortMode::DRP);
-      }
-      break;
-    default:
-      ALOGE("getCurrentRoleHelper: Invalid tag detected while extracting role");
-      return Status::ERROR;
+  if (roleName == "source") {
+    if (currentRole.getTag() == PortRole::powerRole)
+      currentRole.set<PortRole::powerRole>(PortPowerRole::SOURCE);
+    else
+      currentRole.set<PortRole::mode>(PortMode::DFP);
+  } else if (roleName == "sink") {
+    if (currentRole.getTag() == PortRole::powerRole)
+      currentRole.set<PortRole::powerRole>(PortPowerRole::SINK);
+    else
+      currentRole.set<PortRole::mode>(PortMode::UFP);
+  } else if (roleName == "host") {
+    if (currentRole.getTag() == PortRole::dataRole)
+      currentRole.set<PortRole::dataRole>(PortDataRole::HOST);
+    else
+      currentRole.set<PortRole::mode>(PortMode::DFP);
+  } else if (roleName == "device") {
+    if (currentRole.getTag() == PortRole::dataRole)
+      currentRole.set<PortRole::dataRole>(PortDataRole::DEVICE);
+    else
+      currentRole.set<PortRole::mode>(PortMode::UFP);
+  } else if (roleName == "dual") {
+     currentRole.set<PortRole::mode>(PortMode::DRP);
+  } else if (roleName != "none") {
+    /* case for none has already been addressed.
+     * so we check if the role isn't none.
+     */
+    return Status::UNRECOGNIZED_ROLE;
   }
 
   return Status::SUCCESS;
