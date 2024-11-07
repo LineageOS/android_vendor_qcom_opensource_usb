@@ -224,28 +224,24 @@ static std::string appendRoleNodeHelper(const std::string &portName, PortRole::T
     }
 }
 
-static const char *convertRoletoString(const PortRole &role) {
-  switch (role.getTag()) {
-    case PortRole::powerRole:
-      return role.get<PortRole::powerRole>() == PortPowerRole::SOURCE ? "source" : "sink";
-    case PortRole::dataRole:
-      return role.get<PortRole::dataRole>() == PortDataRole::HOST ? "host" : "device";
-    case PortRole::mode:
-      switch (role.get<PortRole::mode>()) {
-        case PortMode::UFP:
-          return "sink";
-        case PortMode::DFP:
-          return "source";
-        case PortMode::AUDIO_ACCESSORY:
-          return "audio_accessory";
-        case PortMode::DEBUG_ACCESSORY:
-          return "debug";
-        default:
-          return "none";
-      }
-    default:
-      return "none";
+static const char *convertRoletoString(PortRole role) {
+  if (role.getTag() == PortRole::powerRole) {
+    if (role.get<PortRole::powerRole>() == PortPowerRole::SOURCE)
+      return "source";
+    else if (role.get<PortRole::powerRole>() == PortPowerRole::SINK)
+      return "sink";
+  } else if (role.getTag() == PortRole::dataRole) {
+    if (role.get<PortRole::dataRole>() == PortDataRole::HOST)
+      return "host";
+    if (role.get<PortRole::dataRole>() == PortDataRole::DEVICE)
+      return "device";
+  } else if (role.getTag() == PortRole::mode) {
+    if (role.get<PortRole::mode>() == PortMode::UFP)
+      return "sink";
+    if (role.get<PortRole::mode>() == PortMode::DFP)
+      return "source";
   }
+  return "none";
 }
 
 static void extractRole(std::string &roleName) {
@@ -267,11 +263,6 @@ static void switchToDrp(const std::string &portName) {
 }
 
 bool Usb::switchMode(const std::string &portName, const PortRole &newRole) {
-  if (newRole.getTag() != PortRole::mode) {
-    ALOGE("Fatal: switchMode called with invalid tag");
-    return false;
-  }
-
   std::string filename = appendRoleNodeHelper(portName, newRole.getTag());
   bool roleSwitch = false;
 
@@ -320,15 +311,9 @@ Usb::Usb(std::string deviceName, std::string gadgetName)
 
 ScopedAStatus Usb::switchRole(const std::string &portName, const PortRole &newRole,
     int64_t in_transactionId) {
-  // Check if the role tag is valid before proceeding
-  if (newRole.getTag() != PortRole::mode &&
-      newRole.getTag() != PortRole::dataRole &&
-      newRole.getTag() != PortRole::powerRole) {
-    ALOGE("Fatal: switchRole called with invalid tag");
-    return ScopedAStatus::ok();
-  }
-
   std::string filename = appendRoleNodeHelper(portName, newRole.getTag());
+  std::string written;
+  bool roleSwitch = false;
 
   if (filename == "") {
     ALOGE("Fatal: invalid node type");
@@ -339,19 +324,17 @@ ScopedAStatus Usb::switchRole(const std::string &portName, const PortRole &newRo
 
   ALOGI("filename write: %s role:%s", filename.c_str(), convertRoletoString(newRole));
 
-  bool roleSwitch = false;
   if (newRole.getTag() == PortRole::mode) {
-    roleSwitch = switchMode(portName, newRole);
+      roleSwitch = switchMode(portName, newRole);
   } else {
     if (WriteStringToFile(convertRoletoString(newRole), filename)) {
-      std::string written;
       if (ReadFileToString(filename, &written)) {
         extractRole(written);
         ALOGI("written: %s", written.c_str());
         if (written == convertRoletoString(newRole)) {
           roleSwitch = true;
         } else {
-          ALOGE("Role switch failed: mismatch in role values");
+          ALOGE("Role switch failed");
         }
       } else {
         ALOGE("Unable to read back the new role");
@@ -393,41 +376,35 @@ static Status getCurrentRoleHelper(const std::string &portName, bool connected,
   std::string roleName;
   std::string accessory;
 
-  // Set the tag to NONE first to clear any previous values.
-  switch (currentRole.getTag()) {
-    case PortRole::powerRole:
-      currentRole.set<PortRole::powerRole>(PortPowerRole::NONE);
-      break;
-    case PortRole::dataRole:
-      currentRole.set<PortRole::dataRole>(PortDataRole::NONE);
-      break;
-    case PortRole::mode:
-      currentRole.set<PortRole::mode>(PortMode::NONE);
-      break;
-    default:
-      ALOGE("getCurrentRoleHelper: Invalid PortRole tag");
-      return Status::ERROR;
+  // Mode
+
+  if (currentRole.getTag() == PortRole::powerRole) {
+    currentRole.set<PortRole::powerRole>(PortPowerRole::NONE);
+  } else if (currentRole.getTag() == PortRole::dataRole) {
+    currentRole.set<PortRole::dataRole>(PortDataRole::NONE);
+  } else if (currentRole.getTag() == PortRole::mode) {
+    currentRole.set<PortRole::mode>(PortMode::NONE);
+  } else {
+    return Status::ERROR;
   }
 
-  if (!connected) {
+  if (!connected)
     return Status::SUCCESS;
-  }
 
   if (currentRole.getTag() == PortRole::mode || currentRole.getTag() == PortRole::powerRole) {
-    if (getAccessoryConnected(portName, accessory) == Status::SUCCESS) {
-      if (accessory == "analog_audio") {
-        if (currentRole.getTag() == PortRole::powerRole) {
-          currentRole.set<PortRole::powerRole>(PortPowerRole::SINK);
-        } else {
-          currentRole.set<PortRole::mode>(PortMode::AUDIO_ACCESSORY);
-        }
-        return Status::SUCCESS;
-      } else if (accessory == "debug" && currentRole.getTag() == PortRole::mode) {
-        currentRole.set<PortRole::mode>(PortMode::DEBUG_ACCESSORY);
-        return Status::SUCCESS;
-      }
-    } else {
+    if (getAccessoryConnected(portName, accessory) != Status::SUCCESS) {
       return Status::ERROR;
+    }
+    if (accessory == "analog_audio") {
+      if (currentRole.getTag() == PortRole::powerRole) {
+        currentRole.set<PortRole::powerRole>(PortPowerRole::SINK);
+      } else {
+        currentRole.set<PortRole::mode>(PortMode::AUDIO_ACCESSORY);
+      }
+      return Status::SUCCESS;
+    } else if (accessory == "debug" && currentRole.getTag() == PortRole::mode) {
+      currentRole.set<PortRole::mode>(PortMode::DEBUG_ACCESSORY);
+      return Status::SUCCESS;
     }
   }
 
@@ -439,33 +416,27 @@ static Status getCurrentRoleHelper(const std::string &portName, bool connected,
 
   extractRole(roleName);
 
-  switch (currentRole.getTag()) {
-    case PortRole::powerRole:
-      if (roleName == "source") {
-        currentRole.set<PortRole::powerRole>(PortPowerRole::SOURCE);
-      } else if (roleName == "sink") {
-        currentRole.set<PortRole::powerRole>(PortPowerRole::SINK);
-      }
-      break;
-    case PortRole::dataRole:
-      if (roleName == "host") {
-        currentRole.set<PortRole::dataRole>(PortDataRole::HOST);
-      } else if (roleName == "device") {
-        currentRole.set<PortRole::dataRole>(PortDataRole::DEVICE);
-      }
-      break;
-    case PortRole::mode:
-      if (roleName == "source") {
-        currentRole.set<PortRole::mode>(PortMode::DFP);
-      } else if (roleName == "sink") {
-        currentRole.set<PortRole::mode>(PortMode::UFP);
-      } else if (roleName == "dual") {
-        currentRole.set<PortRole::mode>(PortMode::DRP);
-      }
-      break;
-    default:
-      ALOGE("getCurrentRoleHelper: Invalid tag detected while extracting role");
-      return Status::ERROR;
+  if (roleName == "source") {
+    currentRole.set<PortRole::powerRole>(PortPowerRole::SOURCE);
+  } else if (roleName == "sink") {
+    currentRole.set<PortRole::powerRole>(PortPowerRole::SINK);
+  } else if (roleName == "host") {
+    if (currentRole.getTag() == PortRole::dataRole)
+      currentRole.set<PortRole::dataRole>(PortDataRole::HOST);
+    else
+      currentRole.set<PortRole::mode>(PortMode::DFP);
+  } else if (roleName == "device") {
+    if (currentRole.getTag() == PortRole::dataRole)
+      currentRole.set<PortRole::dataRole>(PortDataRole::DEVICE);
+    else
+      currentRole.set<PortRole::mode>(PortMode::UFP);
+  } else if (roleName == "dual") {
+     currentRole.set<PortRole::mode>(PortMode::DRP);
+  } else if (roleName != "none") {
+    /* case for none has already been addressed.
+     * so we check if the role isn't none.
+     */
+    return Status::UNRECOGNIZED_ROLE;
   }
 
   return Status::SUCCESS;
