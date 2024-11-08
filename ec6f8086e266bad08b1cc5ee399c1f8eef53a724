@@ -122,6 +122,23 @@
       "message": "Ok.",
       "revId": "ec6f8086e266bad08b1cc5ee399c1f8eef53a724",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "b49ede00_d947a298",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 22465
+      },
+      "writtenOn": "2024-11-08T17:42:03Z",
+      "side": 1,
+      "message": "Fixes the issue in sm8550",
+      "revId": "ec6f8086e266bad08b1cc5ee399c1f8eef53a724",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
