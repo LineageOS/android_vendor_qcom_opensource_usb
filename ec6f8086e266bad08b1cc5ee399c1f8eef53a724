@@ -139,6 +139,23 @@
       "message": "Fixes the issue in sm8550",
       "revId": "ec6f8086e266bad08b1cc5ee399c1f8eef53a724",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "a1e8feb8_810467c7",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 26672
+      },
+      "writtenOn": "2024-11-09T03:27:34Z",
+      "side": 1,
+      "message": "breaks usb on sm6375",
+      "revId": "ec6f8086e266bad08b1cc5ee399c1f8eef53a724",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
