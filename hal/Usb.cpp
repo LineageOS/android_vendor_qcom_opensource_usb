@@ -417,9 +417,15 @@ static Status getCurrentRoleHelper(const std::string &portName, bool connected,
   extractRole(roleName);
 
   if (roleName == "source") {
-    currentRole.set<PortRole::powerRole>(PortPowerRole::SOURCE);
+    if (currentRole.getTag() == PortRole::powerRole)
+      currentRole.set<PortRole::powerRole>(PortPowerRole::SOURCE);
+    else
+      currentRole.set<PortRole::mode>(PortMode::DFP);
   } else if (roleName == "sink") {
-    currentRole.set<PortRole::powerRole>(PortPowerRole::SINK);
+    if (currentRole.getTag() == PortRole::powerRole)
+      currentRole.set<PortRole::powerRole>(PortPowerRole::SINK);
+    else
+      currentRole.set<PortRole::mode>(PortMode::UFP);
   } else if (roleName == "host") {
     if (currentRole.getTag() == PortRole::dataRole)
       currentRole.set<PortRole::dataRole>(PortDataRole::HOST);
