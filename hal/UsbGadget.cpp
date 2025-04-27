@@ -54,6 +54,7 @@
 #define QDSS_INST_NAME_PROP "vendor.usb.qdss.inst.name"
 #define UVC_ENABLED_PROP "ro.usb.uvc.enabled"
 #define CONFIG_STRING CONFIG_PATH "strings/0x409/configuration"
+#define CURRENT_SPEED_PROP "vendor.usb.current_speed"
 
 namespace aidl {
 namespace android {
@@ -152,6 +153,7 @@ ScopedAStatus UsbGadget::getUsbSpeed(const shared_ptr<IUsbGadgetCallback> &callb
   if (ReadFileToString("/sys/class/udc/" + gadgetName + "/current_speed",
                           &current_speed)) {
       current_speed = Trim(current_speed);
+      SetProperty(CURRENT_SPEED_PROP, current_speed);
 
       UsbSpeed speed = UsbSpeed::UNKNOWN;
       if (current_speed == "low-speed")
