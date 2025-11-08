@@ -824,8 +824,8 @@ static void uevent_event(const unique_fd &uevent_fd, struct Usb *usb) {
   static std::regex bus_reset_regex(
       "change@(/devices/platform/soc/.*dwc3/xhci-hcd\\.\\d\\.auto/"
       "usb\\d/\\d-\\d(?:/[\\d\\.-]+)*)/([^/]*:[^/]*)");
-  static std::regex udc_regex("(add|remove)@/devices/platform/soc/.*/" +
-                              gadgetName + "/udc/" + gadgetName);
+  static std::regex udc_regex(
+      "(add|remove)@/devices/platform/soc/.*/.*dwc3/udc/.*dwc3");
   static std::regex offline_regex(
       "offline@(/devices/platform/.*dwc3/xhci-hcd\\.\\d\\.auto/usb.*)");
   static std::regex backlight_regex(
@@ -858,7 +858,8 @@ static void uevent_event(const unique_fd &uevent_fd, struct Usb *usb) {
       checkUsbInterfaceAutoSuspend("/sys" + devpath.str(), intfpath.str());
       checkUsbHIDDevice(usb, "/sys" + devpath.str());
     }
-  } else if (std::regex_match(msg, match, udc_regex)) {
+  } else if (std::regex_match(msg, match, udc_regex) &&
+             (strstr(msg, gadgetName.c_str()))) {
     if (!strncmp(msg, "add", 3)) {
       // Allow ADBD to resume its FFS monitor thread
       SetProperty(VENDOR_USB_ADB_DISABLED_PROP, "0");
@@ -880,7 +881,7 @@ static void uevent_event(const unique_fd &uevent_fd, struct Usb *usb) {
           retry--;
         }
       }
-    } else {
+    } else if (!strncmp(msg, "remove", 6)) {
       // When the UDC is removed, the ConfigFS gadget will no longer be
       // bound. If ADBD is running it would keep opening/writing to its
       // FFS EP0 file but since FUNCTIONFS_BIND doesn't happen it will
