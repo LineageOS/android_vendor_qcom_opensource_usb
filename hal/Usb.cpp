@@ -813,25 +813,19 @@ static void uevent_event(const unique_fd &uevent_fd, struct Usb *usb) {
 
   std::string gadgetName = GetProperty(USB_CONTROLLER_PROP, "");
   static std::regex add_regex(
-      "add@(/devices/platform/soc/.*dwc3/xhci-hcd\\.\\d\\.auto/"
-      "usb\\d/\\d-\\d(?:/[\\d\\.-]+)*)");
+      R"(add@(/devices/platform/soc/.*dwc3/xhci-hcd\.\d\.auto/usb\d/\d-\d(?:/[\d\.-]+)*))");
   static std::regex remove_regex(
-      "remove@((/devices/platform/soc/.*dwc3/xhci-hcd\\.\\d\\.auto/"
-      "usb\\d)/\\d-\\d(?:/[\\d\\.-]+)*)");
+      R"(remove@((/devices/platform/soc/.*dwc3/xhci-hcd\.\d\.auto/usb\d)/\d-\d(?:/[\d\.-]+)*))");
   static std::regex bind_regex(
-      "bind@(/devices/platform/soc/.*dwc3/xhci-hcd\\.\\d\\.auto/"
-      "usb\\d/\\d-\\d(?:/[\\d\\.-]+)*)/([^/]*:[^/]*)");
+      R"(bind@(/devices/platform/soc/.*dwc3/xhci-hcd\.\d\.auto/usb\d/\d-\d(?:/[\d\.-]+)*)/([^/]*:[^/]*))");
   static std::regex bus_reset_regex(
-      "change@(/devices/platform/soc/.*dwc3/xhci-hcd\\.\\d\\.auto/"
-      "usb\\d/\\d-\\d(?:/[\\d\\.-]+)*)/([^/]*:[^/]*)");
+      R"(change@(/devices/platform/soc/.*dwc3/xhci-hcd\.\d\.auto/usb\d/\d-\d(?:/[\d\.-]+)*)/([^/]*:[^/]*))");
   static std::regex udc_regex(
-      "(add|remove)@/devices/platform/soc/.*/.*dwc3/udc/.*dwc3");
+      R"((add|remove)@/devices/platform/soc/.*/.*dwc3/udc/.*dwc3)");
   static std::regex offline_regex(
-      "offline@(/devices/platform/.*dwc3/xhci-hcd\\.\\d\\.auto/usb.*)");
+      R"(offline@/devices/platform/soc/([^/]+)/[^/]+/(xhci-hcd\.\d\.auto)/usb\d+)");
   static std::regex backlight_regex(
-      "change@(/devices/platform/soc/.*qcom,mdss_mdp/backlight/"
-      "panel0-backlight)");
-  static std::regex dwc3_regex("\\/(\\w+.\\w+usb)/.*dwc3");
+      R"(change@(/devices/platform/soc/.*qcom,mdss_mdp/backlight/panel0-backlight))");
 
   n = uevent_kernel_multicast_recv(uevent_fd.get(), msg, UEVENT_MSG_LEN);
   if (n <= 0) return;
@@ -906,6 +900,17 @@ static void uevent_event(const unique_fd &uevent_fd, struct Usb *usb) {
       }
 
       if (!udc_found) SetProperty(VENDOR_USB_ADB_DISABLED_PROP, "1");
+    }
+  } else if (std::regex_match(msg, match, offline_regex)) {
+    // Check if usb node belongs to dwc3-qcom
+    if (match.str(1).find("f8800") != std::string::npos) {
+      ALOGI("Restarting host mode for %s controller", match.str(1).c_str());
+
+      WriteStringToFile("/sys/bus/platform/drivers/xhci-hcd/unbind",
+                        match.str(2));
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+      WriteStringToFile("/sys/bus/platform/drivers/xhci-hcd/bind",
+                        match.str(2));
     }
   } else if (std::regex_match(msg, match, bus_reset_regex)) {
     std::csub_match devpath = match[1];
