@@ -87,6 +87,7 @@ on zygote-start
     mkdir /config/usb_gadget/g1/functions/ffs.diag 0770 system usb
     mkdir /config/usb_gadget/g1/functions/ffs.diag_mdm 0770 system usb
     mkdir /config/usb_gadget/g1/functions/ffs.diag_mdm2 0770 system usb
+    mkdir /config/usb_gadget/g1/functions/ffs.ipcr 0770 system usb
     mkdir /config/usb_gadget/g1/functions/ffs.aoa 0770 system usb
     mkdir /config/usb_gadget/g1/functions/ffs.ctrl 0770 system usb
     mkdir /config/usb_gadget/g1/functions/diag.diag 0770 system usb
@@ -98,6 +99,7 @@ on zygote-start
     mkdir /config/usb_gadget/g1/functions/gsi.rmnet 0770 system usb
     mkdir /config/usb_gadget/g1/functions/gsi.rndis 0770 system usb
     mkdir /config/usb_gadget/g1/functions/gsi.dpl 0770 system usb
+    mkdir /config/usb_gadget/g1/functions/gsi.ncm 0770 system usb
     mkdir /config/usb_gadget/g1/functions/qdss.qdss 0770 system usb
     mkdir /config/usb_gadget/g1/functions/qdss.qdss_mdm 0770 system usb
     mkdir /config/usb_gadget/g1/functions/qdss.qdss_sw 0770 system usb
@@ -168,12 +170,12 @@ on zygote-start
     write /config/usb_gadget/g1/functions/rndis.rndis/class "ef"
     write /config/usb_gadget/g1/functions/rndis.rndis/subclass 4
     write /config/usb_gadget/g1/functions/rndis.rndis/protocol 1
-    write /config/usb_gadget/g1/functions/ncm.gs6/ifname ncm%d
-    write /config/usb_gadget/g1/functions/ncm.gs6/os_desc/interface.ncm/compatible_id "WINNCM"
     write /config/usb_gadget/g1/functions/diag.diag/serial ${ro.serialno}
     mkdir /dev/usb-ffs 0775 shell system
     mkdir /dev/usb-ffs/adb 0770 shell system
     mount functionfs adb /dev/usb-ffs/adb uid=2000,gid=1000,rmode=0770,fmode=0660
+    mkdir /dev/usb-ffs/ipcr 0770 shell system
+    mount functionfs ipcr /dev/usb-ffs/ipcr uid=2000,gid=1000,rmode=0770,fmode=0660
     mkdir /dev/usb-ffs/aoa 0770 shell system
     mount functionfs aoa /dev/usb-ffs/aoa uid=2000,gid=1000,rmode=0770,fmode=0660
     mkdir /dev/usb-ffs/ctrl 0770 shell system
@@ -189,6 +191,14 @@ on zygote-start
     exec u:r:vendor_qti_init_shell:s0 - system usb -- /vendor/bin/init.qcom.usb.sh
     write /config/usb_gadget/g1/strings/0x409/product ${vendor.usb.product_string}
     write /config/usb_gadget/g2/strings/0x409/product ${vendor.usb.product_string}
+
+    #
+    # Rename NCM interface to ncm0 to avoid using the default name usb0.
+    # This would avoid ethernet code claiming this interface and thus creating
+    # conflict with the tethering path.
+    #
+    write /config/usb_gadget/g1/functions/ncm.gs6/ifname "ncm%d"
+    write /config/usb_gadget/g1/functions/ncm.gs6/os_desc/interface.ncm/compatible_id "WINNCM"
 
 on zygote-start && property:vendor.usb.use_ffs_mtp=1
    mkdir /config/usb_gadget/g1/functions/ffs.mtp 0770 system usb

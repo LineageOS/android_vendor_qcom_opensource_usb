@@ -63,7 +63,7 @@ if [ "$(getprop ro.build.type)" != "user" ]; then
           *)
 	      case "$(getprop ro.baseband)" in
 	      "apq")
-		if [ "$target" == "niobe" ] || [ "$target" == "seraph" ] || [ "$target" == "anorak61" ] || [ "$target" == "neo61" ]; then
+		if [ "$target" == "niobe" ] || [ "$target" == "seraph" ] || [ "$target" == "pikachu" || [ "$target" == "anorak61" ] || [ "$target" == "neo61" ]; then
 			setprop persist.vendor.usb.config diag,qdss,adb
 		else
 			setprop persist.vendor.usb.config diag,adb
@@ -111,18 +111,28 @@ if [ "$(getprop ro.build.type)" != "user" ]; then
 	              "msm8998" | "sdm660" | "apq8098_latv")
 		          setprop persist.vendor.usb.config diag,serial_cdev,rmnet,adb
 		      ;;
-		      "monaco")
-		          setprop persist.vendor.usb.config diag,qdss,rmnet,adb
-		      ;;
 	              "sdm845" | "sdm710")
 		          setprop persist.vendor.usb.config diag,serial_cdev,rmnet,dpl,adb
 		      ;;
 	              "msmnile" | "sm6150" | "trinket" | "lito" | "atoll" | "bengal" | "lahaina" | "holi" | "blair" | \
-				  "taro" | "kalama" | "pineapple" | "sun" | "parrot" | "pitti" | "volcano")
+				  "taro" | "kalama" | "pineapple" | "sun" | "canoe" | "parrot" | "pitti" | "volcano")
 			  setprop persist.vendor.usb.config diag,serial_cdev,rmnet,dpl,qdss,adb
 		      ;;
 		      "gen4")
 			  setprop persist.vendor.usb.config adb
+		      ;;
+		      "vienna" | "monaco" | "malabar" | "shikra")
+			  setprop persist.vendor.usb.config diag,qdss,rmnet,adb
+		      ;;
+		      "chora")
+		           case "$soc_id" in
+			           "568" | "776")
+			              setprop persist.vendor.usb.config diag,serial_cdev,rmnet,dpl,qdss,adb
+			           ;;
+			           *)
+				      setprop persist.vendor.usb.config diag,qdss,rmnet,adb
+			           ;;
+		               esac
 		      ;;
 	              *)
 		          setprop persist.vendor.usb.config diag,adb

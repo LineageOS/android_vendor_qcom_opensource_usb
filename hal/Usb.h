@@ -102,6 +102,8 @@ struct Usb : public BnUsb {
   bool limitedPower;
   // List of connected HID USB devices
   std::list<std::string> hidDevs;
+  // USB power brick connection status
+  bool powerBrickConnected;
 
  private:
   std::thread mPoll;

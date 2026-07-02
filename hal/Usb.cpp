@@ -310,6 +310,24 @@ Usb::Usb(std::string deviceName, std::string gadgetName)
       mDevicePath(SOC_PATH + deviceName + "/"),
       mGadgetName(gadgetName) {}
 
+static bool isConnectedToUsbPowerBrick() {
+  std::string usbPsyTypePath = "/sys/class/power_supply/usb/type";
+  std::string chargerType;
+  bool ret = false;
+
+  ret = ReadFileToString(usbPsyTypePath, &chargerType);
+  if (!ret) {
+    return false;
+  }
+
+  chargerType = Trim(chargerType);
+  if (chargerType == "USB_DCP") {
+    return true;
+  }
+
+  return false;
+}
+
 ScopedAStatus Usb::switchRole(const std::string &portName,
                               const PortRole &newRole,
                               int64_t in_transactionId) {
@@ -648,6 +666,28 @@ Status Usb::getPortStatusHelper(std::vector<PortStatus> &currentPortStatus,
             ContaminantProtectionMode::NONE);
         status.contaminantProtectionStatus = ContaminantProtectionStatus::NONE;
       }
+
+      if (isConnectedToUsbPowerBrick()) {
+        status.powerBrickStatus = PowerBrickStatus::CONNECTED;
+      } else {
+        status.powerBrickStatus = PowerBrickStatus::NOT_CONNECTED;
+      }
+    }
+    return Status::SUCCESS;
+  } else { /* /sys/class/typec/ is empty */
+    if (names.size() == 0) {
+      ALOGI("Hardcode parameters for non-typec targets");
+      currentPortStatus.resize(1);
+      /* Assignments are done to support non-TypeC platforms to pass VTS */
+      auto &status = currentPortStatus[0];
+
+      status.supportedModes.clear();
+      status.currentMode = PortMode::NONE;
+      status.currentPowerRole = PortPowerRole::NONE;
+      status.currentDataRole = PortDataRole::NONE;
+      status.canChangeMode = false;
+      status.canChangeDataRole = false;
+      status.canChangePowerRole = false;
     }
     return Status::SUCCESS;
   }
@@ -767,8 +807,9 @@ static void handle_typec_uevent(Usb *usb, const char *msg) {
 // process POWER_SUPPLY uevent for contaminant presence
 static void handle_psy_uevent(Usb *usb, const char *msg) {
   std::vector<PortStatus> currentPortStatus;
-  bool moisture_detected;
+  bool moisture_detected = false;
   std::string contaminantPresence;
+  bool powerBrickStatus;
 
   while (*msg) {
     if (!strncmp(msg, "POWER_SUPPLY_NAME=", 18)) {
@@ -784,14 +825,17 @@ static void handle_psy_uevent(Usb *usb, const char *msg) {
   }
 
   // read moisture detection status from sysfs
-  if (usb->mContaminantStatusPath.empty() ||
-      !ReadFileToString(usb->mContaminantStatusPath, &contaminantPresence))
-    return;
+  if (!usb->mContaminantStatusPath.empty() &&
+      ReadFileToString(usb->mContaminantStatusPath, &contaminantPresence)) {
+    moisture_detected = (contaminantPresence[0] == '1');
+  }
 
-  moisture_detected = (contaminantPresence[0] == '1');
+  powerBrickStatus = isConnectedToUsbPowerBrick();
 
-  if (usb->mContaminantPresence != moisture_detected) {
+  if ((usb->mContaminantPresence != moisture_detected) ||
+      (usb->powerBrickConnected != powerBrickStatus)) {
     usb->mContaminantPresence = moisture_detected;
+    usb->powerBrickConnected = powerBrickStatus;
 
     std::scoped_lock lock(usb->mLock);
     if (usb->mCallback) {
