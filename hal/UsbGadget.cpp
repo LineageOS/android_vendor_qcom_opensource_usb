@@ -47,6 +47,7 @@
 #define USB_CONTROLLER_PROP "vendor.usb.controller"
 #define DIAG_FUNC_NAME_PROP "vendor.usb.diag.func.name"
 #define RNDIS_FUNC_NAME_PROP "vendor.usb.rndis.func.name"
+#define NCM_FUNC_NAME_PROP "vendor.usb.ncm.func.name"
 #define RMNET_FUNC_NAME_PROP "vendor.usb.rmnet.func.name"
 #define RMNET_INST_NAME_PROP "vendor.usb.rmnet.inst.name"
 #define DPL_INST_NAME_PROP "vendor.usb.dpl.inst.name"
@@ -196,6 +197,16 @@ static std::string rndisFuncname() {
   return rndisFunc + ".rndis";
 }
 
+static std::string ncmFuncname() {
+  std::string ncmFunc = GetProperty(NCM_FUNC_NAME_PROP, "");
+
+  if (ncmFunc == "gsi") {
+    return "gsi.ncm";
+  }
+
+  return "ncm.gs6";
+}
+
 static std::string qdssFuncname(const char *debug) {
   auto qdss = "qdss." + GetProperty(QDSS_INST_NAME_PROP, "qdss");
   auto debug_iface = FUNCTIONS_PATH + qdss + "/enable_debug_inface";
@@ -221,9 +232,10 @@ static std::map<std::string, std::function<std::string()> > supported_funcs{
        return GetProperty(RMNET_FUNC_NAME_PROP, "gsi") + "." +
               GetProperty(DPL_INST_NAME_PROP, "dpl");
      }},
+    {"ipcr", []() { return "ffs.ipcr"; }},
     {"mass_storage", []() { return "mass_storage.0"; }},
     {"mtp", []() { return "ffs.mtp"; }},
-    {"ncm", []() { return "ncm.gs6"; }},
+    {"ncm", ncmFuncname},
     {"ptp", []() { return "ffs.ptp"; }},
     {"qdss", []() { return qdssFuncname("0"); }},
     {"qdss_debug", []() { return qdssFuncname("1"); }},
