@@ -3,11 +3,14 @@
 
 on early-init
     chown system usb /sys/class/usb_notify/usb_control/disable
+    chown system usb /sys/devices/platform/soc/${vendor.usb.device:-a600000.ssusb}/dynamic_disable
     chown system usb /sys/devices/platform/soc/${vendor.usb.device:-a600000.ssusb}/usb_data_enabled
     chown system usb /sys/devices/platform/soc/${vendor.usb.device:-a600000.ssusb}/mode
+    chmod 664 /sys/devices/platform/soc/${vendor.usb.device:-a600000.ssusb}/dynamic_disable
     chmod 664 /sys/devices/platform/soc/${vendor.usb.device:-a600000.ssusb}/usb_data_enabled
     chmod 664 /sys/devices/platform/soc/${vendor.usb.device:-a600000.ssusb}/mode
     # Disable USB data initially, even with existing connected device.
+    write /sys/devices/platform/soc/${vendor.usb.device:-a600000.ssusb}/dynamic_disable 1
     write /sys/devices/platform/soc/${vendor.usb.device:-a600000.ssusb}/usb_data_enabled 0
 
 service vendor.usb-hal /vendor/bin/hw/android.hardware.usb-service.qti
