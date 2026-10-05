@@ -1997,7 +1997,7 @@ on property:vendor.usb.uvc.function.init=1
     symlink /config/usb_gadget/g1/functions/uvc.0/control/header/h /config/usb_gadget/g1/functions/uvc.0/control/class/ss/h
     mkdir /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u
     mkdir /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u/360p
-    write /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u/360p/dwFrameInterval 166666\n333333\n666666\n1000000\n5000000\n
+    write /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u/360p/dwFrameInterval 333333\n666666\n1000000\n5000000\n
     write /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u/360p/dwDefaultFrameInterval 333333
     mkdir /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u/720p
     write /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u/720p/wWidth 1280
@@ -2006,7 +2006,7 @@ on property:vendor.usb.uvc.function.init=1
     write /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u/720p/dwMaxBitRate 29491200
     write /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u/720p/dwMaxVideoFrameBufferSize 1843200
     write /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u/720p/dwDefaultFrameInterval 333333
-    write /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u/720p/dwFrameInterval 166666\n333333\n666666\n1000000\n5000000\n
+    write /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u/720p/dwFrameInterval 333333\n666666\n1000000\n5000000\n
     mkdir /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u/1080p
     write /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u/1080p/wWidth 1920
     write /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u/1080p/wHeight 1080
@@ -2014,10 +2014,10 @@ on property:vendor.usb.uvc.function.init=1
     write /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u/1080p/dwMaxBitRate 995328000
     write /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u/1080p/dwMaxVideoFrameBufferSize 4147200
     write /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u/1080p/dwDefaultFrameInterval 333333
-    write /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u/1080p/dwFrameInterval 166666\n333333\n666666\n1000000\n5000000\n
+    write /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u/1080p/dwFrameInterval 333333\n666666\n1000000\n5000000\n
     mkdir /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u1
     mkdir /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u1/360p
-    write /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u1/360p/dwFrameInterval 166666\n333333\n666666\n1000000\n5000000\n
+    write /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u1/360p/dwFrameInterval 333333\n666666\n1000000\n5000000\n
     write /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u1/360p/dwDefaultFrameInterval 333333
     mkdir /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1
     mkdir /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1/360p
@@ -2027,7 +2027,7 @@ on property:vendor.usb.uvc.function.init=1
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1/360p/dwMaxBitRate 55296000
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1/360p/dwMaxVideoFrameBufferSize 460800
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1/360p/dwDefaultFrameInterval 333333
-    write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1/360p/dwFrameInterval 166666\n333333\n666666\n1000000\n5000000\n
+    write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1/360p/dwFrameInterval 333333\n666666\n1000000\n5000000\n
     mkdir /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1/720p
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1/720p/wWidth 1280
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1/720p/wHeight 720
@@ -2035,7 +2035,7 @@ on property:vendor.usb.uvc.function.init=1
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1/720p/dwMaxBitRate 29491200
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1/720p/dwMaxVideoFrameBufferSize 1843200
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1/720p/dwDefaultFrameInterval 333333
-    write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1/720p/dwFrameInterval 166666\n333333\n666666\n1000000\n5000000\n
+    write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1/720p/dwFrameInterval 333333\n666666\n1000000\n5000000\n
     mkdir /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1/1080p
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1/1080p/wWidth 1920
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1/1080p/wHeight 1080
@@ -2043,7 +2043,7 @@ on property:vendor.usb.uvc.function.init=1
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1/1080p/dwMaxBitRate 995328000
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1/1080p/dwMaxVideoFrameBufferSize 4147200
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1/1080p/dwDefaultFrameInterval 333333
-    write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1/1080p/dwFrameInterval 166666\n333333\n666666\n1000000\n5000000\n
+    write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1/1080p/dwFrameInterval 333333\n666666\n1000000\n5000000\n
     mkdir /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m
     mkdir /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/360p
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/360p/wWidth 640
@@ -2052,7 +2052,7 @@ on property:vendor.usb.uvc.function.init=1
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/360p/dwMaxBitRate 55296000
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/360p/dwMaxVideoFrameBufferSize 460800
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/360p/dwDefaultFrameInterval 333333
-    write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/360p/dwFrameInterval 166666\n333333\n666666\n1000000\n5000000\n
+    write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/360p/dwFrameInterval 333333\n666666\n1000000\n5000000\n
     mkdir /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/720p
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/720p/wWidth 1280
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/720p/wHeight 720
@@ -2060,7 +2060,7 @@ on property:vendor.usb.uvc.function.init=1
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/720p/dwMaxBitRate 29491200
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/720p/dwMaxVideoFrameBufferSize 1843200
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/720p/dwDefaultFrameInterval 333333
-    write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/720p/dwFrameInterval 166666\n333333\n666666\n1000000\n5000000\n
+    write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/720p/dwFrameInterval 333333\n666666\n1000000\n5000000\n
     mkdir /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/1080p
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/1080p/wWidth 1920
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/1080p/wHeight 1080
@@ -2068,7 +2068,7 @@ on property:vendor.usb.uvc.function.init=1
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/1080p/dwMaxBitRate 995328000
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/1080p/dwMaxVideoFrameBufferSize 4147200
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/1080p/dwDefaultFrameInterval 333333
-    write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/1080p/dwFrameInterval 166666\n333333\n666666\n1000000\n5000000\n
+    write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/1080p/dwFrameInterval 333333\n666666\n1000000\n5000000\n
     mkdir /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/1440p
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/1440p/wWidth 2560
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/1440p/wHeight 1440
@@ -2076,7 +2076,7 @@ on property:vendor.usb.uvc.function.init=1
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/1440p/dwMaxBitRate 1769472000
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/1440p/dwMaxVideoFrameBufferSize 7372800
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/1440p/dwDefaultFrameInterval 333333
-    write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/1440p/dwFrameInterval 166666\n333333\n666666\n1000000\n5000000\n
+    write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/1440p/dwFrameInterval 333333\n666666\n1000000\n5000000\n
     mkdir /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/2160p
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/2160p/wWidth 3840
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/2160p/wHeight 2160
@@ -2084,7 +2084,7 @@ on property:vendor.usb.uvc.function.init=1
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/2160p/dwMaxBitRate 3981312000
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/2160p/dwMaxVideoFrameBufferSize 16588800
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/2160p/dwDefaultFrameInterval 333333
-    write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/2160p/dwFrameInterval 166666\n333333\n666666\n1000000\n5000000\n
+    write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/2160p/dwFrameInterval 333333\n666666\n1000000\n5000000\n
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m/bmaControls 0x04
     write /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1/bmaControls 0x04
     mkdir /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h
@@ -2095,7 +2095,7 @@ on property:vendor.usb.uvc.function.init=1
     write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/360p/dwMaxBitRate 36864000
     write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/360p/dwMaxVideoFrameBufferSize 4147200
     write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/360p/dwDefaultFrameInterval 333333
-    write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/360p/dwFrameInterval 166666\n333333\n666666\n1000000\n5000000\n
+    write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/360p/dwFrameInterval 333333\n666666\n1000000\n5000000\n
     mkdir /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/720p
     write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/720p/wWidth 1280
     write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/720p/wHeight 720
@@ -2103,7 +2103,7 @@ on property:vendor.usb.uvc.function.init=1
     write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/720p/dwMaxBitRate 147456000
     write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/720p/dwMaxVideoFrameBufferSize 4147200
     write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/720p/dwDefaultFrameInterval 333333
-    write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/720p/dwFrameInterval 166666\n333333\n666666\n1000000\n5000000\n
+    write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/720p/dwFrameInterval 333333\n666666\n1000000\n5000000\n
     mkdir /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/1080p
     write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/1080p/wWidth 1920
     write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/1080p/wHeight 1080
@@ -2111,20 +2111,11 @@ on property:vendor.usb.uvc.function.init=1
     write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/1080p/dwMaxBitRate 331776000
     write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/1080p/dwMaxVideoFrameBufferSize 4147200
     write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/1080p/dwDefaultFrameInterval 333333
-    write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/1080p/dwFrameInterval 166666\n333333\n666666\n1000000\n5000000\n
-    mkdir /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/2160p
-    write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/2160p/wWidth 3840
-    write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/2160p/wHeight 2160
-    write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/2160p/dwMinBitRate 265420800
-    write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/2160p/dwMaxBitRate 3981312000
-    write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/2160p/dwMaxVideoFrameBufferSize 16588800
-    write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/2160p/dwDefaultFrameInterval 333333
-    write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/2160p/dwFrameInterval 166666\n333333\n666666\n1000000\n5000000\n
+    write /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h/1080p/dwFrameInterval 333333\n666666\n1000000\n5000000\n
     mkdir /config/usb_gadget/g1/functions/uvc.0/streaming/header/h
     mkdir /config/usb_gadget/g1/functions/uvc.0/streaming/header/h1
     symlink /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u1 /config/usb_gadget/g1/functions/uvc.0/streaming/header/h1/u1
-    symlink /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1 /config/usb_gadget/g1/functions/uvc.0/streaming/header/h1/m1
-    symlink /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h /config/usb_gadget/g1/functions/uvc.0/streaming/header/h1/h1
+    symlink /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m1 /config/usb_gadget/g1/functions/uvc.0/streaming/header/h1/h1
     symlink /config/usb_gadget/g1/functions/uvc.0/streaming/uncompressed/u /config/usb_gadget/g1/functions/uvc.0/streaming/header/h/u
     symlink /config/usb_gadget/g1/functions/uvc.0/streaming/mjpeg/m /config/usb_gadget/g1/functions/uvc.0/streaming/header/h/m
     symlink /config/usb_gadget/g1/functions/uvc.0/streaming/h264/h /config/usb_gadget/g1/functions/uvc.0/streaming/header/h/h
