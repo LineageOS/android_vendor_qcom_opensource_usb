@@ -2035,8 +2035,8 @@ on property:vendor.usb.eud=0
 
 on property:vendor.usb.uvc.function.init=1
     write /config/usb_gadget/g1/functions/uvc.0/function_name "Android Webcam"
-    write /config/usb_gadget/g1/functions/uvc.0/streaming_maxpacket 3072
-    # write /config/usb_gadget/g1/functions/uvc.0/streaming_maxburst 5
+    write /config/usb_gadget/g1/functions/uvc.0/streaming_maxpacket 1024
+    write /config/usb_gadget/g1/functions/uvc.0/streaming_maxburst 2
     # write /config/usb_gadget/g1/functions/uvc.0/streaming_interval 2
     # setup control params
     mkdir /config/usb_gadget/g1/functions/uvc.0/control/header/h
