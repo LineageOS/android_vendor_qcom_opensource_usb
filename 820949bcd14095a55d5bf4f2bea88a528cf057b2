@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "7fe83d3e_2501c915",
+        "filename": "etc/init.qcom.usb.rc",
+        "patchSetId": 3
+      },
+      "lineNbr": 2039,
+      "author": {
+        "id": 11883
+      },
+      "writtenOn": "2026-10-06T22:20:24Z",
+      "side": 1,
+      "message": "2*1024≠3072",
+      "revId": "820949bcd14095a55d5bf4f2bea88a528cf057b2",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
