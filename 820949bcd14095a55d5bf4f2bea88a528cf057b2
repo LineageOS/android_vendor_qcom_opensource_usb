@@ -16,6 +16,24 @@
       "message": "2*1024≠3072",
       "revId": "820949bcd14095a55d5bf4f2bea88a528cf057b2",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "f4c506fe_eb5bc6e1",
+        "filename": "etc/init.qcom.usb.rc",
+        "patchSetId": 3
+      },
+      "lineNbr": 2039,
+      "author": {
+        "id": 29415
+      },
+      "writtenOn": "2026-10-06T22:26:32Z",
+      "side": 1,
+      "message": "maxburst 2 is 3 packets:\n\ndrivers/usb/gadget/function/f_uvc.c:\n...\n        uvc_ss_streaming_comp.bMaxBurst \u003d opts-\u003estreaming_maxburst;\n        uvc_ss_streaming_comp.wBytesPerInterval \u003d\n                cpu_to_le16(max_packet_size * max_packet_mult *\n                            (opts-\u003estreaming_maxburst + 1));\n...\n\nmax_packet_size \u003d 1024\nmax_packet_mult \u003d 1\nbMaxBurst \u003d 2\nwBytesPerInterval \u003d 1024 × 1 × (2 + 1) \u003d 3072",
+      "parentUuid": "7fe83d3e_2501c915",
+      "revId": "820949bcd14095a55d5bf4f2bea88a528cf057b2",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
