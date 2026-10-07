@@ -1,5 +1,23 @@
 {
-  "comments": [],
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "f275c225_61e4d7d4",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2026-10-07T12:28:11Z",
+      "side": 1,
+      "message": "For future reference these were picked from kalama branch, they\u0027re not in the branch we are currently tracking from qcom, so it makes sense to revert.",
+      "revId": "0ce91b4584b17124857e332e13ec536db99d822f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ],
   "submitRequirementResults": [
     {
       "submitRequirement": {
