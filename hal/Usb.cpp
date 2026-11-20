@@ -82,6 +82,7 @@ const char GOOGLE_USBC_35_ADAPTER_UNPLUGGED_ID_STR[] = "5029";
 
 static bool checkUsbWakeupSupport();
 static void checkUsbInHostMode();
+static bool isUdcPresent();
 static void checkUsbDeviceAutoSuspend(const std::string &devicePath);
 static bool checkUsbInterfaceAutoSuspend(const std::string &devicePath,
                                          const std::string &intf);
@@ -926,24 +927,7 @@ static void uevent_event(const unique_fd &uevent_fd, struct Usb *usb) {
       // just keep repeating this in a 1 second retry loop. Each iteration
       // will re-trigger a ConfigFS UDC bind which will keep failing.
       // Setting this property stops ADBD from proceeding with the retry.
-
-      DIR *dir = opendir(USB_UDC_PATH);
-      bool udc_found = false;
-
-      // enumerate /sys/class/udc/* to see if any UDCs still exist
-      if (dir != NULL) {
-        struct dirent *entity;
-
-        while ((entity = readdir(dir))) {
-          if (entity->d_type == DT_LNK) {
-            udc_found = true;
-            break;
-          }
-        }
-        closedir(dir);
-      }
-
-      if (!udc_found) SetProperty(VENDOR_USB_ADB_DISABLED_PROP, "1");
+      if (!isUdcPresent()) SetProperty(VENDOR_USB_ADB_DISABLED_PROP, "1");
     }
   } else if (std::regex_match(msg, match, offline_regex)) {
     // Check if usb node belongs to dwc3-qcom
@@ -1124,6 +1108,27 @@ ScopedAStatus Usb::setCallback(const std::shared_ptr<IUsbCallback> &callback) {
   return ScopedAStatus::ok();
 }
 
+// Returns true if any UDC is still registered under /sys/class/udc.
+static bool isUdcPresent() {
+  DIR *dir = opendir(USB_UDC_PATH);
+  bool udc_found = false;
+
+  // enumerate /sys/class/udc/* to see if any UDCs still exist
+  if (dir != NULL) {
+    struct dirent *entity;
+
+    while ((entity = readdir(dir))) {
+      if (entity->d_type == DT_LNK) {
+        udc_found = true;
+        break;
+      }
+    }
+    closedir(dir);
+  }
+
+  return udc_found;
+}
+
 static void checkUsbInHostMode() {
   std::string gadgetName =
       "/sys/bus/platform/devices/" + GetProperty(USB_CONTROLLER_PROP, "");
@@ -1132,8 +1137,13 @@ static void checkUsbInHostMode() {
     struct dirent *gadgetDir;
     while ((gadgetDir = readdir(gd))) {
       if (strstr(gadgetDir->d_name, "xhci-hcd")) {
-        SetProperty(VENDOR_USB_ADB_DISABLED_PROP, "1");
         closedir(gd);
+        // Only pause ADBD if host mode has also removed the UDC, as the
+        // udc remove uevent handler does. Kernels that keep the UDC
+        // registered in host mode (msm-4.19 dwc3-msm) never send the udc
+        // add uevent that clears the property again, so setting it here
+        // would leave ADB over USB disabled until reboot.
+        SetProperty(VENDOR_USB_ADB_DISABLED_PROP, isUdcPresent() ? "0" : "1");
         return;
       }
     }
